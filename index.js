@@ -1,28 +1,34 @@
 const express = require("express");
-const jwt = require("jsonwebtoken");
-const fs = require("fs");
 const app = express();
-require("dotenv").config();
+const port = process.env.PORT || 3000;
 
-app.get("/token", async (req, res) => {
-  const now = Math.floor(Date.now() / 1000);
+const jwt = require("jsonwebtoken");
+
+app.get("/", (req, res) => {
+  res.send("JWT Firebase service running");
+});
+
+app.get("/token", (req, res) => {
   const payload = {
-    iss: process.env.CLIENT_EMAIL,
-    scope: "https://www.googleapis.com/auth/devstorage.read_write",
-    aud: "https://oauth2.googleapis.com/token",
-    exp: now + 3600,
-    iat: now,
+    iss: process.env.FIREBASE_CLIENT_EMAIL,
+    sub: process.env.FIREBASE_CLIENT_EMAIL,
+    aud: "https://storage.googleapis.com/",
+    scope: "https://www.googleapis.com/auth/devstorage.full_control",
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + 3600,
   };
 
   try {
-    const privateKey = process.env.PRIVATE_KEY.replace(/\\n/g, "\n");
-    const token = jwt.sign(payload, privateKey, { algorithm: "RS256" });
+    const token = jwt.sign(payload, process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"), {
+      algorithm: "RS256",
+    });
+
     res.json({ token });
-  } catch (e) {
-    res.status(500).json({ error: "Token generation failed", details: e.message });
+  } catch (error) {
+    res.status(500).json({ error: "Token generation failed", details: error.message });
   }
 });
 
-app.listen(3000, () => {
-  console.log("JWT service running on port 3000");
+app.listen(port, () => {
+  console.log(`JWT Firebase Service listening on port ${port}`);
 });
