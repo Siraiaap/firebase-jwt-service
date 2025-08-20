@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  />
+  <title>SiraIA – Tu compañera digital confiable</title>
+  <meta name="theme-color" content="#6F8576" />
+  <style>
+    :root{
+      --bg-app: #EDEAE0;        /* fondo principal */
+      --bg-chat: #F6F4EF;       /* panel chat */
+      --ink-main:#3A3D3B;       /* texto principal (corregido) */
+      --ink-muted:#596264;      /* texto secundario */
+      --brand:#6F8576;          /* acento */
+      --brand-strong:#556D60;   /* hover/active */
+      --bubble-bot:#FFFFFF;     /* burbuja sira */
+      --bubble-user:#DCE6E0;    /* burbuja usuario */
+      --border-soft:#E5E1D8;
+      --warn:#B24B4B;           /* errores sutiles */
+      --shadow: 0 8px 24px rgba(0,0,0,.08);
+      --radius:18px;
+      --radius-lg:22px;
+      --radius-sm:12px;
+    }
+
+    /* Reset suave */
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Arial, sans-serif;
+      color:var(--ink-main);
+      background:var(--bg-app);
+      display:flex;align-items:center;justify-content:center;
+      min-height:100svh;
+    }
+
+    .siraia-app{
+      width:100%;
+      max-width:480px;
+      height:100%;
+      max-height:100svh;
+      background:var(--bg-chat);
+      border-radius:16px;
+      box-shadow: var(--shadow);
+      display:flex;flex-direction:column;
+      overflow:hidden;
+      position:relative;
+      padding-bottom: env(safe-area-inset-bottom); /* Ocupa todo alto en móviles con safe-area */
+    }
+
+    header{
+      display:flex;align-items:center;gap:10px;justify-content:space-between;
+      padding:12px 14px;
+      background:var(--bubble-bot);
+      border-bottom:1px solid var(--border-soft);
+    }
+    header .title{
+      display:flex;align-items:center;gap:10px;
+      font-weight:800; letter-spacing:.3px;
+      color:var(--ink-main);
+      font-size:20px;
+    }
+    .buy-credits-header{
+      margin-left:auto;
+      background: var(--brand);
+      color:#fff; border:none;
+      padding:8px 12px; border-radius:999px;
+      font-weight:700; font-size:13px;
+      box-shadow: 0 4px 10px rgba(0,0,0,.08);
+      cursor:pointer;
+    }
+    .buy-credits-header:hover{ background:var(--brand-strong); }
+    .credits{
+      color:var(--ink-muted);
+      font-size:12px;font-weight:700;
+      background:#EEF2EE; padding:6px 10px;
+      border-radius:999px; border:1px solid #E0E8E1;
+    }
+
+    #chat-history{
+      flex:1 1 auto; overflow-y:auto;
+      padding:18px;
+      display:flex;flex-direction:column;gap:10px;
+      scroll-behavior:smooth;
+    }
+
+    .bubble{
+      max-width:85%;
+      padding:10px 14px;
+      border-radius: var(--radius);
+      line-height:1.5; font-size:16px;
+      box-shadow: 0 1px 2px rgba(0,0,0,.04);
+      word-wrap:break-word;
+    }
+    .siraia-bubble{
+      align-self:flex-start;
+      background:var(--bubble-bot);
+      border-top-left-radius:8px;
+    }
+    .user-bubble{
+      align-self:flex-end;
+      background:var(--bubble-user);
+      border-top-right-radius:8px;
+    }
+    .thinking-dots{
+      display:flex;gap:6px;align-items:center;
+      height:18px;
+    }
+    .thinking-dots span{
+      width:8px;height:8px;border-radius:50%;
+      background:#C8D3CC; display:inline-block;
+      animation:bounce 1.3s infinite ease-in-out both;
+    }
+    .thinking-dots span:nth-child(1){animation-delay:-.24s}
+    .thinking-dots span:nth-child(2){animation-delay:-.12s}
+    @keyframes bounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+
+    /* --- Nuevo: botón de reproducción SVG en color institucional --- */
+    .play-btn{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:8px 12px;border-radius:12px;background:#fff;
+      border:1px solid var(--border-soft);cursor:pointer
+    }
+    .play-btn svg{width:20px;height:20px;fill:var(--brand);display:block}
+    .play-btn[disabled]{opacity:.6;cursor:default}
+
+    footer{
+      background:var(--bubble-bot);
+      border-top:1px solid var(--border-soft);
+      padding-bottom: max(8px, env(safe-area-inset-bottom));
+    }
+    .action-buttons{
+      display:flex; justify-content:space-around; gap:4px;
+      padding:8px 10px; border-top:1px solid var(--border-soft);
+      background:#fff;
+    }
+    .action-buttons button{
+      background:none;border:none;color:var(--brand);
+      font-weight:800; padding:8px 10px;
+      border-radius:10px; cursor:pointer;
+    }
+    .action-buttons button:hover{ filter: brightness(0.97); }
+    .action-buttons button.active{background:#EEF2EE}
+
+    .input-area{ padding:10px; }
+    .input-container{ display:none; gap:10px; align-items:flex-end; justify-content:center; }
+    .input-container.active{ display:flex; }
+
+    /* Barra de entrada tipo WhatsApp/ChatGPT (pestañas clásicas) */
+    .composer{
+      display:flex;align-items:flex-end; gap:8px; width:100%;
+      background:#fff; border:1px solid var(--border-soft);
+      border-radius:16px; padding:8px 8px 8px 12px;
+    }
+    .composer textarea{
+      flex:1 1 auto;
+      border:none; outline:none; resize:none;
+      min-height:40px; max-height: 6.5em; /* ~6 líneas */
+      font-size:15px; line-height:1.25;
+      color:var(--ink-main); background:transparent;
+    }
+    .composer .send{
+      flex:0 0 auto;
+      width:44px; height:44px; border:none; border-radius:50%;
+      background:var(--brand); color:#fff; font-size:18px;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; box-shadow: 0 4px 12px rgba(0,0,0,.12);
+      transition:transform .06s ease, background .15s ease;
+    }
+    .composer .send:active{ transform:scale(.98); background:var(--brand-strong); }
+    .composer .send:disabled{ opacity:.5; cursor:not-allowed; }
+
+    /* Botón grabar – estilo consistente */
+    #record-button{
+      width:64px;height:64px;border:none;border-radius:50%;
+      background:var(--brand); color:#fff; font-size:28px;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow: 0 6px 16px rgba(0,0,0,.18);
+      transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+    #record-button:hover{ background:var(--brand-strong); }
+    #record-button.recording{
+      background: linear-gradient(145deg, #6F8576 0%, #7D9788 100%);
+      animation: pulse 1.2s infinite ease-in-out;
+      box-shadow: 0 0 0 0 rgba(111,133,118,.4);
+    }
+    @keyframes pulse{
+      0%{ box-shadow:0 0 0 0 rgba(111,133,118,.45); transform:scale(1.00); }
+      70%{ box-shadow:0 0 0 16px rgba(111,133,118,0); transform:scale(1.06); }
+      100%{ box-shadow:0 0 0 0 rgba(111,133,118,0); transform:scale(1.00); }
+    }
+
+    /* Vista previa de imagen seleccionada (mejorada) */
+    .preview{
+      display:flex;align-items:center;gap:10px; margin:6px 0 -2px;
+      color:var(--ink-muted); font-size:13px;
+      flex-wrap: wrap; /* permite 2 líneas si el nombre es largo */
+    }
+    .preview img{
+      max-width:84px; max-height:84px;
+      border-radius:10px; border:1px solid var(--border-soft);
+      object-fit:cover;
+    }
+    /* nombres largos abreviados y a dos líneas */
+    #u-name, #imgName{
+      flex:1 1 auto; min-width:0;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+      overflow:hidden; word-break:break-all;
+    }
+    /* Botón compartir / quitar sin romperse */
+    .share-row{
+      margin-top:6px; display:flex; gap:8px; flex-wrap:wrap;
+    }
+    .btn-share{
+      border:none; background:#EEF2EE; color:var(--brand);
+      font-weight:700; font-size:13px; padding:6px 10px;
+      border-radius:999px; cursor:pointer; white-space:nowrap;
+    }
+
+    .muted{ color:var(--ink-muted); }
+    .error{ color:var(--warn); font-weight:700; }
+
+    /* -------- Barra unificada (opcional) -------- */
+    .unified{ padding:10px; border-top:1px solid var(--border-soft); display:none; }
+    .u-composer{display:flex;align-items:flex-end;gap:8px;width:100%;
+      background:#fff;border:1px solid var(--border-soft);border-radius:16px;padding:8px}
+    .u-left{display:flex;align-items:center;gap:6px}
+    .u-btn{width:40px;height:40px;border:1px solid var(--border-soft);background:#fff;border-radius:10px;cursor:pointer}
+    .u-btn:hover{filter:brightness(.98)}
+    .u-menu{position:absolute;bottom:80px;left:12px;background:#fff;border:1px solid var(--border-soft);border-radius:12px;box-shadow:var(--shadow);padding:8px;display:none;gap:8px}
+    .u-menu.open{display:flex}
+    .u-menu button{border:none;background:#EEF2EE;color:var(--brand);font-weight:700;font-size:13px;padding:6px 10px;border-radius:999px;cursor:pointer}
+    .u-text{flex:1 1 auto;border:none;outline:none;resize:none;min-height:40px;max-height:6.5em;font-size:15px;line-height:1.25;color:var(--ink-main);background:transparent}
+    .u-send{flex:0 0 auto;width:48px;height:48px;border:none;border-radius:50%;background:var(--brand);color:#fff;font-size:18px;
+      display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.12);transition:transform .06s ease, background .15s ease}
+    .u-send:active{transform:scale(.98);background:var(--brand-strong)}
+    .u-send[disabled]{opacity:.5;cursor:not-allowed}
+    .u-send.mic.recording{background: linear-gradient(145deg, #6F8576 0%, #7D9788 100%);animation:pulse 1.2s infinite ease-in-out}
+  </style>
+</head>
+<body>
+  <div class="siraia-app">
+    <header>
+      <div class="title">SiraIA</div>
+      <button class="buy-credits-header" id="buyButton">Comprar consultas</button>
+      <div class="credits" id="creditPill" data-current="8" data-total="10">Créditos: 8/10</div>
+    </header>
+
+    <main id="chat-history" aria-live="polite"></main>
+
+    <!-- ===== Pestañas clásicas (se ocultarán si activas barra unificada) ===== -->
+    <footer id="footer-tabs">
+      <div class="input-area">
+        <!-- Texto → Texto -->
+        <div id="input-texto" class="input-container">
+          <div class="composer">
+            <textarea id="txt-prompt" rows="1" placeholder="Escribe tu pregunta…"></textarea>
+            <button id="txt-send-button" class="send" title="Enviar">➤</button>
+          </div>
+        </div>
+
+        <!-- Imagen + Texto → Texto -->
+        <div id="input-imagen" class="input-container">
+          <div style="width:100%">
+            <label class="muted" for="imgtxt-file-input">Adjunta una imagen (JPEG/PNG/WebP)</label>
+            <input id="imgtxt-file-input" type="file" accept="image/jpeg, image/png, image/webp" style="width:100%" />
+            <div id="imgPreview" class="preview" style="display:none">
+              <img id="imgThumb" alt="Vista previa" />
+              <span id="imgName" class="muted"></span>
+              <button id="clearImageTabs" class="btn-share" type="button">Quitar</button>
+            </div>
+            <div class="composer" style="margin-top:8px">
+              <textarea id="imgtxt-prompt" rows="1" placeholder="Escribe tu consulta sobre la imagen…"></textarea>
+              <button id="imgtxt-send-button" class="send" title="Enviar">➤</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Audio → Audio (activa por defecto) -->
+        <div id="input-audio" class="input-container active" style="flex-direction:column;gap:8px">
+          <div class="muted" style="font-size:13px">Pulsa para grabar tu pregunta</div>
+          <button id="record-button" aria-label="Grabar">🎤</button>
+        </div>
+      </div>
+
+      <div class="action-buttons">
+        <button data-input="input-texto" id="tab-texto">📝 Escribir</button>
+        <button data-input="input-imagen" id="tab-imagen">🖼 Imagen</button>
+        <button data-input="input-audio" id="tab-audio" class="active">🎤 Hablar</button>
+      </div>
+    </footer>
+
+    <!-- ===== Barra unificada (opcional) ===== -->
+    <footer id="footer-unified" class="unified">
+      <!-- Menú del botón + -->
+      <div id="u-menu" class="u-menu">
+        <button id="u-camera" type="button">Tomar foto</button>
+        <button id="u-gallery" type="button">Elegir de galería</button>
+      </div>
+
+      <div class="u-composer">
+        <div class="u-left">
+          <button id="u-plus" class="u-btn" title="Adjuntar">＋</button>
+        </div>
+        <textarea id="u-text" class="u-text" rows="1" placeholder="Escribe aquí tu pregunta…"></textarea>
+        <button id="u-action" class="u-send mic" aria-label="Hablar">🎤</button>
+      </div>
+
+      <!-- Inputs ocultos -->
+      <input id="u-file-gallery" type="file" accept="image/*" hidden>
+      <input id="u-file-camera"  type="file" accept="image/*" capture="environment" hidden>
+
+      <!-- Preview (compartida) -->
+      <div id="u-preview" class="preview" style="display:none">
+        <img id="u-thumb" alt="Vista previa"/>
+        <span id="u-name" class="muted"></span>
+        <button id="u-clear" class="btn-share" type="button">Quitar</button>
+      </div>
+    </footer>
+
+    <!-- Audio oculto para reproducir respuestas -->
+    <audio id="siraia-audio-player"></audio>
+  </div>
+
+  <script>
+    /* ====== Flags y endpoints ====== */
+    const UNIFIED_BAR = true; // ← Cambia a false si quieres seguir usando pestañas
+    const SHARE_AUDIO_ENDPOINT = 'https://siraia.com/api/share-audio'; // ← endpoint de enlace corto
+
+    /* ====== Seguridad de logs ====== */
+    const DEBUG = false;
+    const log = (...args) => { if (DEBUG) console.log(...args); };
+
+    function redactUrl(raw){
+      try{
+        const u = new URL(String(raw||''));
+        if (u.searchParams.has('token')){
+          const t = u.searchParams.get('token')||'';
+          const masked = t.length>8? t.slice(0,4)+'…'+t.slice(-4) : '***';
+          u.searchParams.set('token', masked);
+        }
+        return u.toString();
+      }catch{ return '(invalid-url)' }
+    }
+
+    /* ====== Elementos ====== */
+    const chatHistory   = document.getElementById('chat-history');
+    const recordButton  = document.getElementById('record-button');
+    const audioPlayer   = document.getElementById('siraia-audio-player');
+
+    const tabButtons    = document.querySelectorAll('.action-buttons button');
+    const inputBlocks   = document.querySelectorAll('.input-container');
+
+    const txtArea       = document.getElementById('txt-prompt');
+    const txtSend       = document.getElementById('txt-send-button');
+
+    const imgInput      = document.getElementById('imgtxt-file-input');
+    const imgPreview    = document.getElementById('imgPreview');
+    const imgThumb      = document.getElementById('imgThumb');
+    const imgName       = document.getElementById('imgName');
+    const imgTxtArea    = document.getElementById('imgtxt-prompt');
+    const imgTxtSend    = document.getElementById('imgtxt-send-button');
+    const clearImageTabs= document.getElementById('clearImageTabs');
+
+    const buyButton     = document.getElementById('buyButton');
+
+    /* ====== Unificada ====== */
+    const footerTabs    = document.getElementById('footer-tabs');
+    const footerUnified = document.getElementById('footer-unified');
+
+    const uMenu    = document.getElementById('u-menu');
+    const uPlus    = document.getElementById('u-plus');
+    const uCam     = document.getElementById('u-camera');
+    const uGal     = document.getElementById('u-gallery');
+    const uText    = document.getElementById('u-text');
+    const uAction  = document.getElementById('u-action');
+
+    const uFileGal = document.getElementById('u-file-gallery');
+    const uFileCam = document.getElementById('u-file-camera');
+
+    const uPreview = document.getElementById('u-preview');
+    const uThumb   = document.getElementById('u-thumb');
+    const uName    = document.getElementById('u-name');
+    const uClear   = document.getElementById('u-clear');
+
+    /* ====== Endpoints (producción) ====== */
+    const WH_AUDIO  = 'https://siraiaap.app.n8n.cloud/webhook/entrada-audio';
+    const WH_TEXT   = 'https://siraiaap.app.n8n.cloud/webhook/siraia-pregunta';
+    const WH_IMAGE  = 'https://siraiaap.app.n8n.cloud/webhook/siraia-imagen';
+
+    // === UI: actualizar pastilla de créditos ===
+    function updateCreditPill(remaining, total) {
+      const pill = document.getElementById('creditPill');
+      if (!pill) return;
+      if (typeof total === 'number' && total > 0) {
+        pill.dataset.current = String(remaining);
+        pill.dataset.total = String(total);
+        pill.textContent = `Créditos: ${remaining}/${total}`;
+      } else {
+        // si no se envía total, mantenemos el que ya trae el DOM
+        const currentTotal = Number(pill.dataset.total || 10);
+        pill.dataset.current = String(remaining);
+        pill.textContent = `Créditos: ${remaining}/${currentTotal}`;
+      }
+    }
+    // ===== Auth headers (JWT + Request-Id) =====
+    function getAuthHeaders() {
+      const SIRA_JWT = localStorage.getItem('sira_jwt') || '';
+      const REQUEST_ID = (crypto.randomUUID?.() || (Math.random().toString(36).slice(2) + Date.now()));
+      return {
+        ...(SIRA_JWT ? { 'Authorization': `Bearer ${SIRA_JWT}` } : {}),
+        'X-Request-ID': REQUEST_ID,
+      };
+    }
+
+    /* ====== State compartido ====== */
+    let selectedImageFile = null, selectedObjectURL=null;
+    let isRecording = false, mediaRecorder, audioChunks=[], durationTimeout;
+
+    /* ====== Utilidades ====== */
+    function scrollToBottom(){ chatHistory.scrollTop = chatHistory.scrollHeight; }
+    function autogrow(el){
+      el.style.height = 'auto';
+      const max = parseFloat(getComputedStyle(el).lineHeight) * 6; // ~6 líneas
+      el.style.height = Math.min(el.scrollHeight, max) + 'px';
+    }
+    function sanitizeUrl(raw){
+      return String(raw||'')
+        .replace(/(\r\n|\n|\r|\t)/g,'')
+        .replace(/[\u200B-\u200D\uFEFF]/g,'')
+        .trim();
+    }
+    function abbreviateFileName(name, max = 28){
+      if (!name) return '';
+      const dot = name.lastIndexOf('.');
+      const ext = dot > 0 ? name.slice(dot) : '';
+      const base = dot > 0 ? name.slice(0, dot) : name;
+      if (base.length <= max) return base + ext;
+      const head = base.slice(0, Math.ceil((max-1)/2));
+      const tail = base.slice(-Math.floor((max-1)/2));
+      return `${head}…${tail}${ext}`;
+    }
+
+    async function shareText(text){
+      const msg = String(text||'');
+      if (navigator.share){
+        try{ await navigator.share({ text: msg }); }catch{}
+      }else{
+        const url = 'https://wa.me/?text=' + encodeURIComponent(msg);
+        window.open(url, '_blank');
+      }
+    }
+    async function shareUrl(url){
+      if (navigator.share){
+        try { await navigator.share({ url }); } catch {}
+      } else {
+        const wa = 'https://wa.me/?text=' + encodeURIComponent(url);
+        window.open(wa, '_blank');
+      }
+    }
+    async function getShortAudioLink(rawAudioUrl){
+      try{
+        const res = await fetch(SHARE_AUDIO_ENDPOINT, {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ audioUrl: rawAudioUrl })
+        });
+        if (!res.ok) throw new Error('share endpoint failed');
+        const data = await res.json();
+        return data?.shortUrl || rawAudioUrl; // fallback
+      }catch{ return rawAudioUrl; } // fallback a URL directa
+    }
+
+    /* ====== Burbujas ====== */
+    function addUserBubble(text, type='text'){
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble user-bubble';
+      const content = document.createElement('div');
+      if (type==='transcription'){
+        content.textContent = 'Tu pregunta de voz…';
+      }else{
+        content.textContent = String(text||'');
+      }
+      bubble.appendChild(content);
+      chatHistory.appendChild(bubble);
+      scrollToBottom();
+      return content;
+    }
+
+    function addSiraiaThinkingBubble(){
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble siraia-bubble';
+      bubble.innerHTML = `<div class="thinking-dots"><span></span><span></span><span></span></div>`;
+      chatHistory.appendChild(bubble);
+      scrollToBottom();
+      return bubble;
+    }
+
+    function appendShareButtonUnder(el, textToShare){
+      const row = document.createElement('div');
+      row.className = 'share-row';
+      const btn = document.createElement('button');
+      btn.className = 'btn-share';
+      btn.textContent = 'Compartir';
+      btn.onclick = () => shareText(String(textToShare||''));
+      row.appendChild(btn);
+      el.parentElement.appendChild(row);
+    }
+
+    function renderBotText(bubble, text){
+      bubble.innerHTML = '';
+      const p = document.createElement('p');
+      p.textContent = String(text||'');
+      bubble.appendChild(p);
+
+      // botón compartir de la respuesta
+      const row = document.createElement('div');
+      row.className = 'share-row';
+      const btn = document.createElement('button');
+      btn.className = 'btn-share';
+      btn.textContent = 'Compartir';
+      btn.onclick = () => shareText(String(text||''));
+      row.appendChild(btn);
+      bubble.appendChild(row);
+    }
+
+    async function renderAudioControls(bubble, rawAudioUrl){
+      const cleanAudioUrl = sanitizeUrl(rawAudioUrl);
+      try{ new URL(cleanAudioUrl); }catch{
+        const warn = document.createElement('div');
+        warn.className='error'; warn.textContent='La URL de audio llegó corrupta.';
+        bubble.appendChild(warn); return;
+      }
+
+      // ▶️ Reproductor
+      const play = document.createElement('button');
+      play.className='play-btn';
+      play.innerHTML = `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M8 5v14l11-7z"></path>
+        </svg>
+        <span>Escuchar respuesta</span>
+      `;
+
+      audioPlayer.preload='auto';
+      audioPlayer.src = cleanAudioUrl;
+
+      play.onclick = async ()=>{
+        try{
+          await audioPlayer.play();
+          play.innerHTML = `
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 10h3v4H3zm5 0h3v4H8zm5 0h3v4h-3zm5 0h3v4h-3z"></path>
+            </svg>
+            <span>Reproduciendo…</span>
+          `;
+          play.disabled = true;
+        }catch{
+          play.textContent='❌ Error al reproducir';
+          play.disabled = false;
+        }
+      };
+      audioPlayer.onended = ()=>{
+        play.innerHTML = `
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 5v14l11-7z"></path>
+          </svg>
+          <span>Escuchar de nuevo</span>
+        `;
+        play.disabled=false;
+      };
+      audioPlayer.onerror = ()=>{
+        play.textContent='❌ Error al cargar audio';
+        play.disabled=false;
+      };
+
+      bubble.appendChild(play);
+
+// Compartir audio (sin leyenda visual)
+const row = document.createElement('div');
+row.className = 'share-row';
+
+const btnShareAudio = document.createElement('button');
+btnShareAudio.className = 'btn-share';
+btnShareAudio.textContent = 'Compartir audio';
+btnShareAudio.onclick = async () => {
+  // Intentamos usar el link corto; si falla, usamos el largo
+  const buildMsg = (url) =>
+    `Te comparto el audio de SiraIA (puede ser público para quien tenga el enlace).\n\n${url}`;
+
+  try {
+    const shortUrl = await getShortAudioLink(cleanAudioUrl);
+    const msg = buildMsg(shortUrl);
+    if (navigator.share) {
+      await navigator.share({ text: msg });
+    } else {
+      window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+    }
+  } catch {
+    const msg = buildMsg(cleanAudioUrl);
+    if (navigator.share) {
+      await navigator.share({ text: msg }).catch(()=>{});
+    } else {
+      window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+    }
+  }
+};
+
+row.appendChild(btnShareAudio);
+bubble.appendChild(row);
+    }
+
+    function updateSiraiaBubble(bubble, responseData){
+      // Texto opcional
+      if (responseData && typeof responseData.text === 'string' && responseData.text.trim()){
+        renderBotText(bubble, responseData.text);
+      }else{
+        bubble.innerHTML='';
+      }
+
+      // Audio opcional
+      const payload = Array.isArray(responseData)? responseData[0] : responseData || {};
+      const rawAudioUrl = payload.audioUrl ?? payload.respuestaFinal ?? '';
+      if (rawAudioUrl){
+        renderAudioControls(bubble, rawAudioUrl);
+      }
+
+      scrollToBottom();
+    }
+
+    /* ====== Tabs ====== */
+    tabButtons.forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const id = btn.dataset.input;
+        tabButtons.forEach(b=>b.classList.toggle('active', b===btn));
+        inputBlocks.forEach(c=>c.classList.toggle('active', c.id===id));
+      });
+    });
+
+    /* ====== Textarea autogrow ====== */
+    [txtArea, imgTxtArea, uText].forEach(el=>{
+      if(!el) return;
+      el.addEventListener('input', ()=>autogrow(el));
+      autogrow(el);
+    });
+
+    /* ====== Audio → Audio ====== */
+    async function startRecording(){
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+        alert('Tu navegador no permite grabar audio.'); return;
+      }
+      try{
+        const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+        const options = { mimeType: 'audio/webm;codecs=opus' };
+        mediaRecorder = new MediaRecorder(stream, options);
+        audioChunks = [];
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = ()=>{
+          const blob = new Blob(audioChunks, { type: options.mimeType });
+          const rd = new FileReader();
+          rd.onloadend = ()=> sendAudio(rd.result);
+          rd.readAsDataURL(blob);
+        };
+        mediaRecorder.start();
+        isRecording = true;
+        (UNIFIED_BAR ? uAction : recordButton).classList.add('recording');
+        if (UNIFIED_BAR) {
+          uAction.setAttribute('aria-label', 'Detener');
+          uAction.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" fill="#FFFFFF"/></svg>';
+        }
+        durationTimeout = setTimeout(()=>{ if(isRecording) stopRecording(); }, 60000);
+      }catch{
+        alert('No se pudo acceder al micrófono. Revisa permisos.');
+      }
+    }
+    function stopRecording(){
+      if (mediaRecorder && mediaRecorder.state==='recording'){ mediaRecorder.stop(); }
+      isRecording=false;
+      (UNIFIED_BAR ? uAction : recordButton).classList.remove('recording');
+      if (UNIFIED_BAR) {
+        uAction.setAttribute('aria-label', 'Hablar');
+        uAction.textContent = '🎤';
+      }
+    }
+
+    if (recordButton){
+      recordButton.addEventListener('click', ()=> isRecording ? stopRecording() : startRecording());
+    }
+
+    async function sendAudio(base64Audio){
+      const userBubbleContent = addUserBubble('', 'transcription');
+      // Compartir pregunta de voz (placeholder hasta que llegue transcripción)
+      appendShareButtonUnder(userBubbleContent, userBubbleContent.textContent);
+
+      const thinking = addSiraiaThinkingBubble();
+      try{
+        const res = await fetch(WH_AUDIO, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+          body: JSON.stringify({ audio_base64: base64Audio })
+        });
+        let data;
+        try{ data = await res.json(); }
+        catch{
+          const t = await res.text();
+          try{ data = JSON.parse(t); }catch{
+            renderBotText(thinking, 'Respuesta no válida del servidor.');
+            return;
+          }
+        }
+        const payload = Array.isArray(data)? data[0]: data;
+        if (payload && payload.transcription){
+          userBubbleContent.textContent = `"${payload.transcription}"`;
+        }
+        if (typeof payload?.credits_remaining === 'number') {
+          updateCreditPill(payload.credits_remaining, payload.credits_total);
+        }
+        updateSiraiaBubble(thinking, payload);
+      }catch{
+        thinking.textContent='Ocurrió un error. Intenta de nuevo.';
+      }finally{
+        updateUnifiedAction();
+      }
+    }
+
+    /* ====== Texto → Texto (pestañas) ====== */
+    txtSend?.addEventListener('click', ()=>{
+      const q = (txtArea.value||'').trim();
+      if(!q){ alert('Escribe una pregunta.'); return; }
+      // Pintamos pregunta y botón compartir en el chat
+      const content = addUserBubble(q, 'text'); appendShareButtonUnder(content, q);
+      sendText(q); txtArea.value=''; autogrow(txtArea);
+    });
+
+    async function sendText(question){
+      const thinking = addSiraiaThinkingBubble();
+      try{
+        // Enviamos redundante para máxima compatibilidad backend
+        const res = await fetch(WH_TEXT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+          body: JSON.stringify({ text: question, pregunta: question, Texto: question })
+        });
+        const raw = await res.text();
+        let data;
+        try{ data = JSON.parse(raw); }catch{ data = { text: raw }; }
+
+        const payload = Array.isArray(data) ? data[0] : data;
+        const answer = payload?.Texto ?? payload?.text ?? String(raw||'');
+        // ...después de obtener "payload" y "answer"
+        if (typeof payload?.credits_remaining === 'number') {
+          updateCreditPill(payload.credits_remaining, payload.credits_total);
+        }
+        renderBotText(thinking, answer);
+      }catch{
+        renderBotText(thinking, 'Lo siento, ocurrió un error al procesar tu pregunta.');
+      }finally{
+        updateUnifiedAction();
+      }
+    }
+
+    /* ====== Imagen + Texto → Texto (formData, sin tocar backend) ====== */
+    function resetPreview(){
+      // Para pestañas
+      if (imgPreview){
+        imgPreview.style.display='none';
+        if (imgThumb) imgThumb.removeAttribute('src');
+        if (imgName) imgName.textContent='';
+      }
+      // Para unificada
+      if (uPreview){
+        uPreview.style.display='none';
+        if (uThumb) uThumb.removeAttribute('src');
+        if (uName) uName.textContent='';
+      }
+      if (selectedObjectURL){ URL.revokeObjectURL(selectedObjectURL); selectedObjectURL=null; }
+      selectedImageFile=null;
+      updateUnifiedAction();
+    }
+
+    // Pestañas: seleccionador clásico
+    imgInput?.addEventListener('change', (evt)=>{
+      const f = evt.target.files && evt.target.files[0];
+      resetPreview();
+      if (!f){ return; }
+      if (!['image/jpeg','image/png','image/webp'].includes(f.type)){
+        alert('Formato no compatible. Usa JPEG, PNG o WebP.'); imgInput.value=''; return;
+      }
+      if (f.size > 10*1024*1024){
+        alert('La imagen es muy grande (máx 10 MB).'); imgInput.value=''; return;
+      }
+      selectedImageFile = f;
+
+      selectedObjectURL = URL.createObjectURL(f);
+      if (imgThumb) imgThumb.src = selectedObjectURL;
+      if (imgName) imgName.textContent = abbreviateFileName(f.name, 28);
+      if (imgPreview) imgPreview.style.display = 'flex';
+    });
+
+    clearImageTabs?.addEventListener('click', ()=>{
+      if (imgInput) imgInput.value='';
+      resetPreview();
+    });
+
+    imgTxtSend?.addEventListener('click', ()=>{
+      const q = (imgTxtArea.value||'').trim();
+      if (!selectedImageFile){
+        alert('Primero selecciona una imagen.'); return;
+      }
+      // Pintamos “mensaje del usuario” con miniatura y texto + compartir
+      const user = addUserBubble(q || '(Imagen enviada)', 'text');
+      if (selectedObjectURL){
+        const wrap = document.createElement('div');
+        wrap.className='preview'; wrap.style.marginTop='6px';
+        const img = document.createElement('img');
+        img.src = selectedObjectURL; img.alt='Imagen enviada';
+        wrap.appendChild(img);
+        user.parentElement.appendChild(wrap);
+      }
+      appendShareButtonUnder(user, q || '(Imagen enviada)');
+
+      // Enviamos al backend
+      sendImageAndText(selectedImageFile, q);
+
+      // limpiar inputs visuales de la pestaña
+      if (imgTxtArea){ imgTxtArea.value=''; autogrow(imgTxtArea); }
+      if (imgInput){ imgInput.value=''; }
+      resetPreview();
+    });
+
+    async function sendImageAndText(file, promptText){
+      const thinking = addSiraiaThinkingBubble();
+      try{
+        const form = new FormData();
+        form.append('imagen', file, file.name);   // ← lo que espera n8n
+        form.append('texto',  promptText || '');  // ← prompt opcional
+
+        const res = await fetch(WH_IMAGE, {
+          method: 'POST',
+          headers: { ...getAuthHeaders() }, // NO seteamos Content-Type (lo hace FormData)
+          body: form
+        });
+
+        let data=null, raw=null;
+        try{ data = await res.json(); }
+        catch{ raw = await res.text(); try{ data = JSON.parse(raw); }catch{} }
+
+        const payload = Array.isArray(data)? data[0]: data;
+        const answer = payload?.Texto ?? payload?.text ?? (typeof payload==='string'? payload : raw);
+
+        if (!res.ok || !answer || typeof answer!=='string'){
+          renderBotText(thinking, 'Lo siento, ocurrió un error al procesar la imagen.');
+          return;
+        }
+        // ...después de obtener "payload" y "answer"
+        if (typeof payload?.credits_remaining === 'number') {
+          updateCreditPill(payload.credits_remaining, payload.credits_total);
+        }
+        renderBotText(thinking, answer);
+      }catch{
+        renderBotText(thinking, 'Lo siento, ocurrió un error al procesar la imagen.');
+      }finally{
+        updateUnifiedAction();
+      }
+    }
+
+    /* ====== Comprar créditos (placeholder) ====== */
+    buyButton?.addEventListener('click', ()=>{
+      alert('Próximamente: compra de consultas. 🙂');
+    });
+
+    /* ====== ---- BARRA UNIFICADA ---- ====== */
+    function showUnified(on){
+      footerUnified.style.display = on ? 'block' : 'none';
+      footerTabs.style.display    = on ? 'none'  : 'block';
+    }
+    showUnified(UNIFIED_BAR);
+
+    // Acciones + y menú
+    uPlus?.addEventListener('click', ()=> uMenu.classList.toggle('open'));
+    uGal?.addEventListener('click', ()=> uFileGal.click());
+    uCam?.addEventListener('click', ()=> uFileCam.click());
+
+    // Selección desde unificada
+    ;[uFileGal, uFileCam].forEach(inp=>{
+      inp?.addEventListener('change', (evt)=>{
+        const f = evt.target.files && evt.target.files[0];
+        resetPreview();
+        if (!f) return;
+
+        const okType = ['image/jpeg','image/png','image/webp','image/jpg','image/heic','image/heif'].includes(f.type);
+        if (!okType){ alert('Formato no compatible. Usa JPEG, PNG o WebP.'); evt.target.value=''; return; }
+        if (f.size > 10*1024*1024){ alert('La imagen es muy grande (máx 10 MB).'); evt.target.value=''; return; }
+
+        selectedImageFile = f;
+        selectedObjectURL = URL.createObjectURL(f);
+        if (uThumb) uThumb.src = selectedObjectURL;
+        if (uName)  uName.textContent = abbreviateFileName(f.name, 28);
+        if (uPreview) uPreview.style.display='flex';
+        uMenu.classList.remove('open');
+        updateUnifiedAction();
+      });
+    });
+
+    uClear?.addEventListener('click', ()=>{
+      if (uFileGal) uFileGal.value=''; if (uFileCam) uFileCam.value='';
+      resetPreview();
+    });
+
+    function updateUnifiedAction(){
+      if (!UNIFIED_BAR) return;
+      const hasText  = !!(uText && uText.value.trim());
+      const hasImage = !!selectedImageFile;
+      if (hasText || hasImage){
+        uAction.classList.remove('mic','recording');
+        uAction.textContent = '➤';
+        uAction.setAttribute('aria-label','Enviar');
+      }else{
+        uAction.classList.add('mic');
+        uAction.textContent = '🎤';
+        uAction.setAttribute('aria-label','Hablar');
+      }
+    }
+    uText?.addEventListener('input', ()=>{ autogrow(uText); updateUnifiedAction(); });
+
+    // Click principal en barra unificada
+    uAction?.addEventListener('click', ()=>{
+      const hasText  = !!(uText && uText.value.trim());
+      const hasImage = !!selectedImageFile;
+
+      if (hasText || hasImage){
+        if (hasImage){
+          // Pintar inmediatamente pregunta + miniatura + compartir
+          const label = uText.value.trim() || '(Imagen enviada)';
+          const user = addUserBubble(label, 'text');
+          if (selectedObjectURL){
+            const wrap=document.createElement('div');
+            wrap.className='preview'; wrap.style.marginTop='6px';
+            const img=document.createElement('img'); img.src=selectedObjectURL; img.alt='Imagen enviada';
+            wrap.appendChild(img);
+            user.parentElement.appendChild(wrap);
+          }
+          appendShareButtonUnder(user, label);
+
+          // Enviar
+          sendImageAndText(selectedImageFile, uText.value.trim());
+        }else{
+          const q = uText.value.trim();
+          const content = addUserBubble(q, 'text'); appendShareButtonUnder(content, q);
+          sendText(q);
+        }
+
+        if (uText){ uText.value=''; autogrow(uText); }
+        if (uFileGal) uFileGal.value=''; if (uFileCam) uFileCam.value='';
+        resetPreview();
+      }else{
+        if (isRecording) stopRecording(); else startRecording();
+      }
+    });
+
+    // Iniciar estado correcto del botón en unificada
+    updateUnifiedAction();
+  </script>
+</body>
+</html>

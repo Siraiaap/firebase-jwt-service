@@ -1,0 +1,27 @@
+{
+  "hosting": [
+    {
+      "site": "siraia",
+      "public": "public",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        { "source": "**", "destination": "/index.html" }
+      ]
+    },
+    {
+      "site": "siraia-redirects",
+      "public": "redirects",
+      "redirects": [
+        {
+          "source": "/**",
+          "destination": "https://siraia.com",
+          "type": 301
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chat con SiraIA – Tu compañera digital confiable</title>
+  <style>
+    :root {
+      --fondo-app: #e5ddd5;
+      --fondo-chat: #f0f2f5;
+      --burbuja-sira: #ffffff;
+      --burbuja-usuario: #dcf8c6;
+      --texto-principal: #333;
+      --texto-secundario: #667781;
+      --color-primario: #007aff;
+      --color-reproducir: #34c759;
+      --borde-suave: #e9edef;
+      --fuente-principal: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    body {
+      margin: 0;
+      font-family: var(--fuente-principal);
+      background-color: var(--fondo-app);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .siraia-app {
+      width: 100%;
+      height: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--fondo-chat);
+      border-radius: 12px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+      overflow: hidden;
+      position: relative;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 12px;
+      background-color: var(--burbuja-sira);
+      border-bottom: 1px solid var(--borde-suave);
+      gap: 8px;
+    }
+    header h1 { font-size: 18px; margin: 0; }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .credits {
+      font-size: 14px;
+      font-weight: 600;
+      background-color: #f0f2f5;
+      padding: 6px 12px;
+      border-radius: 16px;
+      color: var(--texto-secundario);
+      white-space: nowrap;
+    }
+    .buy-credits-button {
+      background-color: #ff9500;
+      color: white;
+      padding: 8px 10px;
+      border: none;
+      border-radius: 16px;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    #chat-history {
+      flex-grow: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .bubble {
+      max-width: 85%;
+      padding: 10px 15px;
+      border-radius: 18px;
+      line-height: 1.5;
+      font-size: 16px;
+      word-wrap: break-word;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .siraia-bubble {
+      background-color: var(--burbuja-sira);
+      align-self: flex-start;
+      border-top-left-radius: 4px;
+    }
+    .user-bubble {
+      background-color: var(--burbuja-usuario);
+      align-self: flex-end;
+      border-top-right-radius: 4px;
+    }
+    .transcription-text {
+      font-style: italic;
+      color: #555;
+      border-left: 3px solid #b0d8a4;
+      padding-left: 10px;
+    }
+    .thinking-dots span {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background-color: #ccc;
+      border-radius: 50%;
+      margin: 0 2px;
+      animation: bounce 1.4s infinite ease-in-out both;
+    }
+    .thinking-dots span:nth-child(1) { animation-delay: -0.32s; }
+    .thinking-dots span:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1.0); }
+    }
+    .audio-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+    .audio-controls .play-icon {
+      font-size: 24px;
+      color: var(--color-primario);
+    }
+
+    footer {
+      background-color: var(--burbuja-sira);
+      border-top: 1px solid var(--borde-suave);
+    }
+    .input-area { padding: 10px; }
+    .input-container { display: none; }
+    .input-container.active {
+      display: flex;
+      flex-direction: column;   /* *** Parche: layout vertical móvil *** */
+      align-items: stretch;
+      gap: 8px;
+    }
+    .action-buttons {
+      display: flex;
+      justify-content: space-around;
+      padding: 10px;
+      border-top: 1px solid var(--borde-suave);
+    }
+    .action-buttons button {
+      background: none;
+      border: none;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--color-primario);
+      padding: 8px 12px;
+      border-radius: 8px;
+      transition: background-color 0.2s;
+    }
+    #input-audio button {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: none;
+      background-color: var(--color-primario);
+      color: white;
+      font-size: 32px;
+      transition: all 0.3s;
+    }
+    #input-audio button.recording {
+      background-color: #007aff4d;
+      border: 4px solid var(--color-primario);
+      transform: scale(1.1);
+    }
+
+    /* *** Parche: ayudas de estilo para imagen + texto *** */
+    .file-input-wrapper { display:flex; align-items:center; gap:10px; }
+    .file-name { font-size:12px; color:#667781; }
+    #input-imagen .file-input-wrapper { width: 90%; max-width: 420px; }
+    #input-imagen textarea, #input-texto textarea { width: 90%; max-width: 420px; }
+    .send-button { align-self: center; }
+
+    /* *** Parche: evitar solapes sin :has() *** */
+    .siraia-app.is-image-active .input-area { padding-bottom: 48px; }
+
+    /* Hint suave cuando falta prompt en imagen */
+    .hint {
+      font-size: 12px;
+      color: #6b7280;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="siraia-app">
+    <header>
+      <h1>SiraIA</h1>
+      <div class="header-right">
+        <button class="buy-credits-button">🛒 Comprar</button>
+        <div class="credits" data-current="8" data-total="10">Créditos: 8/10</div>
+      </div>
+    </header>
+
+    <main id="chat-history"></main>
+
+    <footer>
+      <div class="input-area">
+        <!-- Pestaña ESCRIBIR -->
+        <div id="input-texto" class="input-container">
+          <textarea id="txt-prompt" placeholder="Escribe tu pregunta aquí..." rows="1"></textarea>
+          <button id="txt-send-button" class="send-button">Enviar</button>
+        </div>
+
+        <!-- Pestaña IMAGEN + TEXTO (optimizado: FormData) -->
+        <div id="input-imagen" class="input-container">
+          <div class="file-input-wrapper">
+            <label for="imgtxt-file-input" class="file-label">Seleccionar imagen</label>
+            <input id="imgtxt-file-input" type="file" accept="image/jpeg, image/png, image/webp" capture="environment">
+            <span id="imgtxt-file-name" class="file-name">Ningún archivo seleccionado</span>
+          </div>
+          <textarea id="imgtxt-prompt" placeholder="Inserta aquí tu consulta sobre la imagen (opcional)..." rows="1"></textarea>
+          <div class="hint" id="imgtxt-hint" style="display:none;">Sugerencia: añade una pregunta para obtener una respuesta más útil 😊</div>
+          <button id="imgtxt-send-button" class="send-button">Enviar</button>
+        </div>
+
+        <!-- Pestaña HABLAR (activa por defecto) -->
+        <div id="input-audio" class="input-container active">
+          <button id="record-button">🎤</button>
+        </div>
+      </div>
+
+      <div class="action-buttons">
+        <button data-input="input-texto">📝 Escribir</button>
+        <button data-input="input-imagen">📷 Imagen</button>
+        <button data-input="input-audio">🎤 Hablar</button>
+      </div>
+    </footer>
+
+    <audio id="siraia-audio-player"></audio>
+  </div>
+
+  <script>
+    // === Modo seguro de logs (producción) ===
+    const DEBUG = false; // true solo en QA
+    const log = (...args) => { if (DEBUG) console.log(...args); };
+    function redactUrl(raw) {
+      try {
+        const u = new URL(String(raw || ''));
+        if (u.searchParams.has('token')) {
+          const t = u.searchParams.get('token') || '';
+          const masked = t.length > 8 ? t.slice(0,4) + '…' + t.slice(-4) : '***';
+          u.searchParams.set('token', masked);
+        }
+        return u.toString();
+      } catch { return '(invalid-url)'; }
+    }
+
+    // === Elementos UI (comunes) ===
+    const chatHistory = document.getElementById('chat-history');
+    const actionButtons = document.querySelectorAll('.action-buttons button');
+    const inputContainers = document.querySelectorAll('.input-container');
+    const recordButton = document.getElementById('record-button');
+    const audioPlayer = document.getElementById('siraia-audio-player');
+    const webhookUrl = 'https://siraiaap.app.n8n.cloud/webhook/entrada-audio';
+
+    let isRecording = false;
+    let mediaRecorder;
+    let audioChunks = [];
+    let durationTimeout;
+
+    // === Helpers UI ===
+    function addUserBubble(text, type = 'text') {
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble user-bubble';
+      const content = document.createElement('div');
+      if (type === 'transcription') {
+        content.innerHTML = `Tu pregunta de voz...`; // controlado
+      } else {
+        content.textContent = text; // seguro
+      }
+      bubble.appendChild(content);
+      chatHistory.appendChild(bubble);
+      scrollToBottom();
+      return content;
+    }
+    function addSiraiaThinkingBubble() {
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble siraia-bubble';
+      bubble.innerHTML = `<div class="thinking-dots"><span></span><span></span><span></span></div>`;
+      chatHistory.appendChild(bubble);
+      scrollToBottom();
+      return bubble;
+    }
+    function sanitizeUrl(raw) {
+      return String(raw || '').replace(/(\r\n|\n|\r|\t)/g,'').replace(/[\u200B-\u200D\uFEFF]/g,'').trim();
+    }
+    function scrollToBottom(){ chatHistory.scrollTop = chatHistory.scrollHeight; }
+
+    // === Render de respuesta (audio o texto) ===
+    function updateSiraiaBubble(bubble, responseData) {
+      bubble.innerHTML = '';
+
+      // Texto (para texto→texto e imagen+texto→texto)
+      if (responseData && (responseData.text || responseData.Texto)) {
+        const textElement = document.createElement('p');
+        textElement.textContent = responseData.text || responseData.Texto || '';
+        bubble.appendChild(textElement);
+      }
+
+      // Audio (para audio→audio)
+      const payload = Array.isArray(responseData) ? responseData[0] : responseData;
+      const rawAudioUrl = payload?.audioUrl ?? payload?.respuestaFinal ?? '';
+      const cleanAudioUrl = sanitizeUrl(rawAudioUrl);
+
+      log('🧪 payload:', payload && { ...payload, audioUrl: redactUrl(payload.audioUrl) });
+
+      if (cleanAudioUrl) {
+        try { new URL(cleanAudioUrl); }
+        catch {
+          bubble.textContent = 'La URL de audio llegó corrupta. Intenta de nuevo.';
+          recordButton.disabled = false; recordButton.innerHTML = '🎤';
+          return;
+        }
+
+        const playButton = document.createElement('div');
+        playButton.className = 'audio-controls';
+        playButton.innerHTML = `<span class="play-icon">▶️</span> Escuchar respuesta`;
+
+        const audioEl = document.getElementById('siraia-audio-player');
+        audioEl.preload = 'auto'; audioEl.src = cleanAudioUrl;
+
+        playButton.onclick = async () => {
+          try {
+            await audioEl.play();
+            playButton.innerHTML = `<span class="play-icon">🔊</span> Reproduciendo...`;
+            playButton.style.pointerEvents = 'none';
+          } catch {
+            playButton.textContent = '❌ Error al reproducir';
+            playButton.style.pointerEvents = 'auto'; playButton.style.color = '#ff3b30';
+          }
+        };
+        audioEl.onended = () => { playButton.innerHTML = `<span class="play-icon">▶️</span> Escuchar de nuevo`; playButton.style.pointerEvents = 'auto'; recordButton.disabled = false; recordButton.innerHTML = '🎤'; };
+        audioEl.onerror = () => { playButton.textContent = '❌ Error al cargar audio'; playButton.style.pointerEvents = 'auto'; playButton.style.color = '#ff3b30'; recordButton.disabled = false; recordButton.innerHTML = '🎤'; };
+
+        bubble.appendChild(playButton);
+      } else if (!responseData || (!responseData.text && !responseData.Texto)) {
+        // Solo mensaje si realmente no llegó ni texto ni audio
+        bubble.textContent = 'La respuesta no contenía audio ni texto.';
+        recordButton.disabled = false; recordButton.innerHTML = '🎤';
+      } else {
+        recordButton.disabled = false; recordButton.innerHTML = '🎤';
+      }
+    }
+
+    function updateUserBubbleWithTranscription(contentElement, transcription) {
+      contentElement.innerHTML = `<span class="transcription-text">"${transcription}"</span>`;
+    }
+
+    // === Grabación (audio→audio) ===
+    async function startRecording() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Tu navegador no es compatible con la grabación de audio.'); return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const options = { mimeType: 'audio/webm;codecs=opus' };
+        mediaRecorder = new MediaRecorder(stream, options);
+        audioChunks = [];
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = () => {
+          const audioBlob = new Blob(audioChunks, { type: options.mimeType });
+          const reader = new FileReader();
+          reader.readAsDataURL(audioBlob);
+          reader.onloadend = () => { sendAudio(reader.result); };
+        };
+        mediaRecorder.start();
+        isRecording = true;
+        recordButton.classList.add('recording'); recordButton.innerHTML = '🛑';
+        durationTimeout = setTimeout(() => { if (isRecording) stopRecording(); }, 60000);
+      } catch { alert("No se pudo acceder al micrófono. Revisa los permisos."); }
+    }
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
+      isRecording = false; recordButton.classList.remove('recording'); recordButton.innerHTML = '⏳'; recordButton.disabled = true; clearTimeout(durationTimeout);
+    }
+
+    // === Envío al backend (audio→audio) ===
+    async function sendAudio(base64Audio) {
+      const userBubbleContent = addUserBubble('', 'transcription');
+      const siraiaBubble = addSiraiaThinkingBubble();
+      try {
+        const response = await fetch(webhookUrl, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ audio_base64: base64Audio })
+        });
+        if (!response.ok) throw new Error(`Error en el servidor: ${response.status}`);
+        let responseData;
+        try { responseData = await response.json(); }
+        catch {
+          const responseText = await response.text();
+          try { responseData = JSON.parse(responseText); }
+          catch { updateSiraiaBubble(siraiaBubble, { text: 'Respuesta no válida del servidor.' }); return; }
+        }
+        const payload = Array.isArray(responseData) ? responseData[0] : responseData;
+        if (payload.transcription) updateUserBubbleWithTranscription(userBubbleContent, payload.transcription);
+        updateSiraiaBubble(siraiaBubble, payload);
+      } catch { siraiaBubble.textContent = 'Lo siento, ocurrió un error. Intenta de nuevo.'; }
+      finally { recordButton.disabled = false; recordButton.innerHTML = '🎤'; }
+    }
+
+    // === Tabs ===
+    actionButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const targetInputId = button.dataset.input;
+        inputContainers.forEach(container => {
+          container.classList.toggle('active', container.id === targetInputId);
+        });
+
+        // *** Parche sin :has(): clase para evitar solapes en modo imagen ***
+        const app = document.querySelector('.siraia-app');
+        if (targetInputId === 'input-imagen') app.classList.add('is-image-active');
+        else app.classList.remove('is-image-active');
+      });
+    });
+    recordButton.addEventListener('click', () => { if (isRecording) stopRecording(); else startRecording(); });
+
+    /* ===========================================================
+       NUEVO: Imagen+Texto→Texto (FormData) y Texto→Texto
+    =========================================================== */
+
+    // --- Texto → Texto ---
+    async function fetchJsonWithFallback(url, payload) {
+      const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload || {}) });
+      try { const data = await res.json(); return { ok: res.ok, data, raw: null }; }
+      catch {
+        const raw = await res.text();
+        try { const data = JSON.parse(raw); return { ok: res.ok, data, raw }; }
+        catch { return { ok: res.ok, data: null, raw }; }
+      }
+    }
+
+    async function sendTextMessage(plainText) {
+      const url = 'https://siraiaap.app.n8n.cloud/webhook/siraia-pregunta';
+      const btn = document.getElementById('txt-send-button');
+      addUserBubble(plainText, 'text');
+      const thinking = addSiraiaThinkingBubble(); btn.disabled = true;
+
+      try {
+        const { ok, data, raw } = await fetchJsonWithFallback(url, { text: plainText });
+        // Acepta "text" o "Texto"
+        const reply =
+          (data && (data.text ?? data.Texto)) ||
+          (Array.isArray(data) ? data[0]?.text ?? data[0]?.Texto : null);
+
+        if (!ok || typeof reply !== 'string' || !reply.trim()) {
+          log('⚠️ Respuesta inesperada (texto):', { ok, data, raw });
+          updateSiraiaBubble(thinking, { text: 'Lo siento, ocurrió un error al procesar tu pregunta.' });
+          return;
+        }
+        updateSiraiaBubble(thinking, { text: reply });
+      } catch (err) {
+        log('❌ Error Texto→Texto:', err);
+        updateSiraiaBubble(thinking, { text: 'Lo siento, ocurrió un error al procesar tu pregunta.' });
+      } finally { btn.disabled = false; }
+    }
+
+    const txtPrompt = document.getElementById('txt-prompt');
+    const txtSendButton = document.getElementById('txt-send-button');
+    if (txtPrompt && txtSendButton) {
+      txtSendButton.addEventListener('click', () => {
+        const plainText = txtPrompt.value.trim();
+        if (!plainText) { alert('Por favor, escribe una pregunta.'); return; }
+        sendTextMessage(plainText);
+        txtPrompt.value = '';
+      });
+    }
+
+    // --- Imagen + Texto → Texto (FormData binario compatible con tu n8n) ---
+    const ALLOWED_IMAGE_TYPES = ['image/jpeg','image/png','image/webp'];
+    const IMAGE_MAX_SIZE_MB = 10;
+
+    const imgtxtFileInput = document.getElementById('imgtxt-file-input');
+    const imgtxtSendButton = document.getElementById('imgtxt-send-button');
+    const imgtxtPrompt = document.getElementById('imgtxt-prompt');
+    const imgtxtHint = document.getElementById('imgtxt-hint');
+    const imgtxtNameEl = document.getElementById('imgtxt-file-name');
+    let selectedImageFile = null;
+
+    function showImagePromptHint(visible) {
+      if (imgtxtHint) imgtxtHint.style.display = visible ? 'block' : 'none';
+    }
+
+    if (imgtxtFileInput && imgtxtSendButton && imgtxtPrompt) {
+      imgtxtFileInput.addEventListener('change', () => {
+        const file = imgtxtFileInput.files && imgtxtFileInput.files[0];
+        if (!file) { imgtxtNameEl.textContent = 'Ningún archivo seleccionado'; selectedImageFile = null; return; }
+
+        if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+          alert('Formato no compatible. Usa JPEG, PNG o WebP.');
+          imgtxtNameEl.textContent = 'Formato no válido';
+          imgtxtFileInput.value = '';
+          selectedImageFile = null;
+          return;
+        }
+        if (file.size > IMAGE_MAX_SIZE_MB * 1024 * 1024) {
+          alert(`La imagen es demasiado grande (máx ${IMAGE_MAX_SIZE_MB} MB).`);
+          imgtxtNameEl.textContent = 'Archivo muy grande';
+          imgtxtFileInput.value = '';
+          selectedImageFile = null;
+          return;
+        }
+        selectedImageFile = file;
+        imgtxtNameEl.textContent = file.name;
+        // Si no hay texto, muestra sugerencia (no bloquea)
+        showImagePromptHint(!imgtxtPrompt.value.trim());
+      });
+
+      imgtxtPrompt.addEventListener('input', () => {
+        showImagePromptHint(!imgtxtPrompt.value.trim());
+      });
+
+      imgtxtSendButton.addEventListener('click', async () => {
+        if (!selectedImageFile) { alert('Por favor, selecciona una imagen primero.'); return; }
+
+        const promptText = imgtxtPrompt.value.trim();
+        addUserBubble(promptText ? `Imagen: "${promptText}"` : 'Imagen', 'text');
+        const thinking = addSiraiaThinkingBubble();
+        imgtxtSendButton.disabled = true;
+
+        try {
+          const form = new FormData();
+          form.append('imagen', selectedImageFile, selectedImageFile.name); // ← campo esperado en tu flujo
+          form.append('texto', promptText); // ← prompt opcional
+
+          const res = await fetch('https://siraiaap.app.n8n.cloud/webhook/siraia-imagen', { method: 'POST', body: form });
+          let data = null, raw = null;
+          try { data = await res.json(); } catch { raw = await res.text(); try { data = JSON.parse(raw); } catch {} }
+
+          const reply =
+            (data && (data.text ?? data.Texto)) ||
+            (Array.isArray(data) ? data[0]?.text ?? data[0]?.Texto : null);
+
+          if (!res.ok || typeof reply !== 'string' || !reply.trim()) {
+            log('⚠️ Respuesta inesperada (imagen):', { ok: res.ok, data, raw });
+            updateSiraiaBubble(thinking, { text: 'Lo siento, ocurrió un error al procesar la imagen.' });
+          } else {
+            updateSiraiaBubble(thinking, { text: reply });
+          }
+        } catch (e) {
+          log('❌ Error Imagen+Texto→Texto:', e);
+          updateSiraiaBubble(thinking, { text: 'Lo siento, ocurrió un error al procesar la imagen.' });
+        } finally {
+          imgtxtSendButton.disabled = false;
+          // Limpiar UI
+          imgtxtPrompt.value = '';
+          if (imgtxtNameEl) imgtxtNameEl.textContent = 'Ningún archivo seleccionado';
+          if (imgtxtFileInput) imgtxtFileInput.value = '';
+          selectedImageFile = null;
+          showImagePromptHint(false);
+        }
+      });
+    }
+  </script>
+</body>
+</html>
