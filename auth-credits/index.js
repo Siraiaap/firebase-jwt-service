@@ -6,20 +6,9 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { parsePhoneNumberFromString } = require('libphonenumber-js');
 
-let serviceAccount = null;
-try {
-  // Carga las credenciales desde el Secret File de Render
-  serviceAccount = require('/etc/secrets/google-credentials.json');
-} catch (e) {
-  console.error('❌ No pude leer /etc/secrets/google-credentials.json:', e?.message);
-}
-
-// ✅ **INICIO: BLOQUE DE INICIALIZACIÓN DE FIREBASE CORREGIDO**
-const admin = require('firebase-admin');
-
 let serviceAccount;
 try {
-  // Lee las credenciales desde el Secret File de Render
+  // Carga las credenciales desde el Secret File de Render
   serviceAccount = require('/etc/secrets/google-credentials.json');
 } catch(e) {
   console.error("Error crítico: No se pudo cargar el archivo de credenciales.", e.message);
@@ -30,7 +19,6 @@ if (!admin.apps.length) {
   if (serviceAccount) {
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
-      // AÑADIMOS ESTA LÍNEA PARA EVITAR AMBIGÜEDAD
       projectId: serviceAccount.project_id, 
     });
     console.log(`Firebase Admin inicializado para el proyecto: ${serviceAccount.project_id}`);
@@ -39,16 +27,14 @@ if (!admin.apps.length) {
   }
 }
 const db = admin.firestore();
-// ✅ **FIN: BLOQUE DE INICIALIZACIÓN DE FIREBASE CORREGIDO**
 
-// ⚠️ Parche para problemas de conexión en Render (gRPC vs REST)
+// Parche para problemas de conexión en Render (gRPC vs REST)
 try {
   db.settings({ ignoreUndefinedProperties: true, preferRest: true });
   console.log('🔥 Configuración de Firestore: preferRest=true aplicada.');
 } catch (e) {
-  console.warn('⚠️ No se pudo aplicar preferRest (esto puede ser normal en versiones antiguas del SDK):', e?.message);
+  console.warn('⚠️ No se pudo aplicar preferRest:', e?.message);
 }
-
 
 // ===== Configuración (leída desde las variables de entorno de Render) =====
 const PORT = process.env.PORT || 8080;
@@ -86,13 +72,19 @@ function toE164(raw, defaultCountry = DEFAULT_COUNTRY) {
 }
 
 function phoneHash(e164) {
-  return crypto.createHash('sha256').update(e164).digest('hex');
+  return crypto.createHash('sha266').update(e164).digest('hex');
 }
 
-
 // ===== Rutas de la API =====
+app.get('/health', (_req, res) => {
+  res.json({
+    ok: true,
+    ts: Date.now(),
+    project: serviceAccount?.project_id || null,
+    adminApps: admin.apps.length,
+  });
+});
 
-// --- RUTA DE DIAGNÓSTICO PARA VERIFICAR LA CONEXIÓN ---
 app.get('/diag/firestore', async (_req, res) => {
   const ref = db.collection('_diag').doc(`ping-${Date.now()}`);
   const t0 = Date.now();
@@ -100,7 +92,6 @@ app.get('/diag/firestore', async (_req, res) => {
     await ref.set({ at: admin.firestore.Timestamp.now(), ok: true });
     const snap = await ref.get();
     const t1 = Date.now();
-    console.log(`[DIAG] Conexión con Firestore exitosa en ${t1 - t0}ms`);
     return res.json({
       ok: true,
       wrote: true,
@@ -109,12 +100,10 @@ app.get('/diag/firestore', async (_req, res) => {
       project: serviceAccount?.project_id || null,
     });
   } catch (e) {
-    console.error(`[DIAG] Falló la conexión con Firestore en ${Date.now() - t0}ms:`, e);
     return res.status(500).json({ ok: false, error: String(e), elapsed_ms: Date.now() - t0 });
   }
 });
 
-// --- RUTA SIGNUP (CON LOGS ADICIONALES) ---
 app.post('/signup', async (req, res) => {
   try {
     const { display_name, phone, accept } = req.body || {};
@@ -168,7 +157,6 @@ app.post('/signup', async (req, res) => {
   }
 });
 
-// --- RUTA /ME ---
 app.get('/me', auth, async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -195,7 +183,6 @@ app.get('/me', auth, async (req, res) => {
   }
 });
 
-// --- RUTA /CREDITS/DEBIT ---
 app.post('/credits/debit', auth, async (req, res) => {
   const userId = req.user.sub;
   const amount = Number(req.body?.amount || 1);
@@ -238,7 +225,6 @@ app.post('/credits/debit', auth, async (req, res) => {
     return res.status(500).json({ error: 'INTERNAL_SERVER_ERROR' });
   }
 });
-
 
 // ===== Iniciar Servidor =====
 app.listen(PORT, () => {
