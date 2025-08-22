@@ -6,11 +6,25 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { parsePhoneNumberFromString } = require('libphonenumber-js');
 
-// ===== Inicialización de Firebase =====
-if (!admin.apps.length) {
-  admin.initializeApp();
+// ✅ **INICIO: BLOQUE DE INICIALIZACIÓN DE FIREBASE CORREGIDO**
+// Esta es la forma correcta de inicializar Firebase en un entorno como Render,
+// usando el "Secret File" que configuraste.
+try {
+  // Render monta el archivo JSON en esta ruta específica
+  const serviceAccount = require('/etc/secrets/google-credentials.json');
+  
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+  }
+} catch (e) {
+  console.error('Error al inicializar Firebase Admin SDK:', e);
+  console.log('Asegúrate de que el Secret File "google-credentials.json" esté configurado en Render.');
 }
 const db = admin.firestore();
+// ✅ **FIN: BLOQUE DE INICIALIZACIÓN DE FIREBASE CORREGIDO**
+
 
 // ===== Configuración (leída desde las variables de entorno de Render) =====
 const PORT = process.env.PORT || 8080;
