@@ -6,35 +6,11 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { parsePhoneNumberFromString } = require('libphonenumber-js');
 
-let serviceAccount;
-try {
-  // Carga las credenciales desde el Secret File de Render
-  serviceAccount = require('/etc/secrets/google-credentials.json');
-} catch(e) {
-  console.error("Error crítico: No se pudo cargar el archivo de credenciales.", e.message);
-}
-
-// Inicializa la app de Firebase con las credenciales Y el ID del proyecto
+// ===== Inicialización de Firebase =====
 if (!admin.apps.length) {
-  if (serviceAccount) {
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      projectId: serviceAccount.project_id, 
-    });
-    console.log(`Firebase Admin inicializado para el proyecto: ${serviceAccount.project_id}`);
-  } else {
-    console.error("No se inicializó Firebase Admin porque faltan las credenciales.");
-  }
+  admin.initializeApp();
 }
 const db = admin.firestore();
-
-// Parche para problemas de conexión en Render (gRPC vs REST)
-try {
-  db.settings({ ignoreUndefinedProperties: true, preferRest: true });
-  console.log('🔥 Configuración de Firestore: preferRest=true aplicada.');
-} catch (e) {
-  console.warn('⚠️ No se pudo aplicar preferRest:', e?.message);
-}
 
 // ===== Configuración (leída desde las variables de entorno de Render) =====
 const PORT = process.env.PORT || 8080;
@@ -44,21 +20,23 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 const DEFAULT_COUNTRY = process.env.DEFAULT_COUNTRY || 'MX';
 const INITIAL_CREDITS = Number(process.env.INITIAL_CREDITS || 10);
 
-// ===== App Express y Middlewares =====
+// ===== App Express =====
 const app = express();
 app.use(helmet());
 app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json({ limit: '10mb' }));
 
+// ===== Middleware de Autenticación (El "guardia de seguridad") =====
 function auth(req, res, next) {
   const authHeader = req.headers['authorization'] || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
   if (!token) return res.status(401).json({ error: 'NO_TOKEN' });
 
   try {
+    // Verificamos que el token sea válido con nuestra llave secreta
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
+    req.user = decoded; // Inyectamos los datos del usuario en la petición
+    next(); // Damos paso a la siguiente función
   } catch (e) {
     return res.status(401).json({ error: 'TOKEN_INVALID' });
   }
@@ -68,42 +46,20 @@ function auth(req, res, next) {
 function toE164(raw, defaultCountry = DEFAULT_COUNTRY) {
   const p = parsePhoneNumberFromString(String(raw || ''), defaultCountry);
   if (!p || !p.isValid()) throw new Error('PHONE_INVALID');
-  return p.number;
+  return p.number; // Devuelve formato E.164 (ej. +525512345678)
 }
 
 function phoneHash(e164) {
-  return crypto.createHash('sha266').update(e164).digest('hex');
+  // Crea un ID de usuario único y anónimo a partir del teléfono
+  return crypto.createHash('sha256').update(e164).digest('hex');
 }
 
 // ===== Rutas de la API =====
-app.get('/health', (_req, res) => {
-  res.json({
-    ok: true,
-    ts: Date.now(),
-    project: serviceAccount?.project_id || null,
-    adminApps: admin.apps.length,
-  });
-});
 
-app.get('/diag/firestore', async (_req, res) => {
-  const ref = db.collection('_diag').doc(`ping-${Date.now()}`);
-  const t0 = Date.now();
-  try {
-    await ref.set({ at: admin.firestore.Timestamp.now(), ok: true });
-    const snap = await ref.get();
-    const t1 = Date.now();
-    return res.json({
-      ok: true,
-      wrote: true,
-      read: snap.exists,
-      elapsed_ms: t1 - t0,
-      project: serviceAccount?.project_id || null,
-    });
-  } catch (e) {
-    return res.status(500).json({ ok: false, error: String(e), elapsed_ms: Date.now() - t0 });
-  }
-});
+// Ruta para verificar que el servicio está vivo
+app.get('/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
 
+// --- RUTA SIGNUP (CORREGIDA CON FIRESTORE) ---
 app.post('/signup', async (req, res) => {
   try {
     const { display_name, phone, accept } = req.body || {};
@@ -111,20 +67,15 @@ app.post('/signup', async (req, res) => {
     if (!display_name || !phone) return res.status(400).json({ error: 'MISSING_FIELDS' });
 
     const phone_e164 = toE164(phone, DEFAULT_COUNTRY);
-    const userId = phoneHash(phone_e164);
-
-    console.log(`[SIGNUP] Iniciando para proyecto=${serviceAccount?.project_id}, userId=${userId}`);
+    const userId = phoneHash(phone_e164); // Usamos el hash del teléfono como ID
 
     const userRef = db.collection('users').doc(userId);
-    const t0 = Date.now();
-    console.log(`[SIGNUP] Consultando Firestore para el usuario...`);
     const userDoc = await userRef.get();
-    const tGet = Date.now() - t0;
-    console.log(`[SIGNUP] Consulta a Firestore tomó ${tGet}ms.`);
 
     let userData;
+
     if (!userDoc.exists) {
-      console.log(`[SIGNUP] Usuario no existe. Creando nuevo documento...`);
+      // El usuario es nuevo, lo creamos
       userData = {
         display_name,
         phone_e164,
@@ -133,9 +84,8 @@ app.post('/signup', async (req, res) => {
         created_at: admin.firestore.FieldValue.serverTimestamp(),
       };
       await userRef.set(userData);
-      console.log(`[SIGNUP] Documento creado.`);
     } else {
-      console.log(`[SIGNUP] Usuario encontrado.`);
+      // El usuario ya existe, solo obtenemos sus datos
       userData = userDoc.data();
     }
 
@@ -150,6 +100,7 @@ app.post('/signup', async (req, res) => {
       },
       jwt: token
     });
+
   } catch (e) {
     if (e.message === 'PHONE_INVALID') return res.status(400).json({ error: 'PHONE_INVALID' });
     console.error("Signup Error:", e);
@@ -157,6 +108,7 @@ app.post('/signup', async (req, res) => {
   }
 });
 
+// --- RUTA /ME (CORREGIDA CON FIRESTORE) ---
 app.get('/me', auth, async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -183,6 +135,7 @@ app.get('/me', auth, async (req, res) => {
   }
 });
 
+// --- RUTA /CREDITS/DEBIT (YA ESTABA BIEN) ---
 app.post('/credits/debit', auth, async (req, res) => {
   const userId = req.user.sub;
   const amount = Number(req.body?.amount || 1);
