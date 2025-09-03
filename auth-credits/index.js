@@ -62,6 +62,15 @@ app.use(helmet());
 app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json({ limit: '10mb' }));
 
+// --- Sonda de diagnóstico (auth-credits) ---
+app.get('/__whoami', (_req, res) => {
+  res.json({
+    from: __filename,
+    marker: 'auth-credits-index',
+    now: Date.now()
+  });
+});
+
 // ===============================
 // Helpers
 // ===============================
