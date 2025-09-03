@@ -71,7 +71,14 @@ function phoneHash(e164) {
 // ===== Rutas de la API =====
 
 // Ruta para verificar que el servicio está vivo
-app.get('/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
+app.get('/health', (_req, res) => {
+  res.json({
+    ok: true,
+    ts: Date.now(),
+    marker: 'signup_v2',   // <= sello de versión para confirmar despliegue
+    project: 'siraia'
+  });
+});
 
 // --- RUTA SIGNUP (CONECTADA A FIRESTORE) ---
 app.post('/signup', async (req, res) => {
@@ -85,10 +92,13 @@ app.post('/signup', async (req, res) => {
 
     const userRef = db.collection('users').doc(userId);
     const userDoc = await userRef.get();
+
     let userData;
+    let isNew = false;
 
     if (!userDoc.exists) {
-      // Si el usuario es nuevo, lo creamos en Firestore
+      // Alta nueva → crear doc y otorgar créditos iniciales
+      isNew = true;
       userData = {
         display_name,
         phone_e164,
@@ -98,21 +108,32 @@ app.post('/signup', async (req, res) => {
       };
       await userRef.set(userData);
     } else {
-      // Si ya existe, solo leemos sus datos
+      // Re-login → no regalar créditos; opcionalmente actualizar apodo
       userData = userDoc.data();
+      if (display_name && display_name.trim() && display_name !== userData.display_name) {
+        await userRef.update({ display_name: display_name.trim() });
+        userData.display_name = display_name.trim();
+      }
     }
 
-    // Creamos el token de autenticación
-    const token = jwt.sign({ sub: userId, phone_e164, display_name }, JWT_SECRET, { expiresIn: JWT_TTL });
-    
+    // JWT con el nombre vigente en Firestore
+    const token = jwt.sign(
+      { sub: userId, phone_e164, display_name: userData.display_name },
+      JWT_SECRET,
+      { expiresIn: JWT_TTL }
+    );
+
     res.json({
       user: {
         id: userId,
         display_name: userData.display_name,
         phone_e164: userData.phone_e164,
-        credits_remaining: userData.credits_remaining
+        credits_remaining: userData.credits_remaining,
+        credits_total: userData.credits_total
       },
-      jwt: token
+      jwt: token,
+      is_new: isNew,
+      credits_awarded: isNew ? INITIAL_CREDITS : 0
     });
 
   } catch (e) {
