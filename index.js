@@ -38,6 +38,16 @@ app.use(helmet());
 app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json({ limit: '10mb' }));
 
+// --- Sonda de diagnóstico (raíz) ---
+app.get('/__whoami', (_req, res) => {
+  res.json({
+    from: __filename,
+    marker: 'root-index',
+    now: Date.now()
+  });
+});
+
+
 /* =========================
    AUTH MIDDLEWARE
    ========================= */
