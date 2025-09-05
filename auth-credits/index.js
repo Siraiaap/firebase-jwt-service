@@ -302,6 +302,82 @@ app.post('/credits/debit', auth, async (req, res) => {
   }
 });
 
+// --- Helpers de mensajes (sanitiza y limita) ---
+function sanitizeRole(raw) {
+  const r = String(raw || '').toLowerCase().trim();
+  return (r === 'user' || r === 'assistant') ? r : '';
+}
+function sanitizeContent(raw) {
+  let s = String(raw ?? '');
+  s = s.replace(/\s+/g, ' ').trim();         // compacta espacios
+  if (s.length > 4000) s = s.slice(0, 4000); // tope 4000 chars
+  return s;
+}
+
+// --- POST /messages: guarda un turno ---
+app.post('/messages', auth, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const role = sanitizeRole(req.body?.role);
+    const content = sanitizeContent(req.body?.content || '');
+    const request_id = (req.body?.request_id || '').toString().slice(0, 120) || undefined;
+
+    if (!role) return res.status(400).json({ error: 'INVALID_ROLE' });
+    if (!content) return res.status(400).json({ error: 'MISSING_CONTENT' });
+
+    const col = db.collection('users').doc(userId).collection('messages');
+    const docRef = await col.add({
+      role,
+      content,
+      request_id: request_id || null,
+      ts: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Limpieza: mantener solo 100 más recientes (borrado best-effort)
+    try {
+      const olderSnap = await col.orderBy('ts', 'desc').offset(100).limit(50).get();
+      const batch = db.batch();
+      olderSnap.forEach(d => batch.delete(d.ref));
+      if (!olderSnap.empty) await batch.commit();
+    } catch (_) { /* opcional, ignoramos errores de limpieza */ }
+
+    return res.json({ ok: true, id: docRef.id });
+  } catch (e) {
+    console.error('POST /messages error:', e);
+    return res.status(500).json({ error: 'STORE_FAILED' });
+  }
+});
+
+// --- GET /messages?limit=100: lista turnos (más nuevos primero) ---
+app.get('/messages', auth, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    let limit = Number(req.query?.limit || 100);
+    if (!Number.isFinite(limit) || limit <= 0) limit = 100;
+    if (limit > 100) limit = 100;
+
+    const col = db.collection('users').doc(userId).collection('messages');
+    const snap = await col.orderBy('ts', 'desc').limit(limit).get();
+
+    const items = snap.docs.map(d => {
+      const x = d.data() || {};
+      let ts = null;
+      if (x.ts?.toMillis) ts = x.ts.toMillis();
+      return {
+        id: d.id,
+        role: x.role || '',
+        content: x.content || '',
+        ts
+      };
+    });
+
+    return res.json({ items, count: items.length });
+  } catch (e) {
+    console.error('GET /messages error:', e);
+    return res.status(500).json({ error: 'LIST_FAILED' });
+  }
+});
+
 /* ================================
    START
 ================================ */
