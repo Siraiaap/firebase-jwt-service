@@ -1,4 +1,4 @@
-// index.js
+// auth-credits/index.js
 'use strict';
 
 const express = require('express');
@@ -8,6 +8,9 @@ const helmet = require('helmet');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { parsePhoneNumberFromString } = require('libphonenumber-js');
+
+// ⬇️ NUEVO: importamos el router de pagos y el handler del webhook
+const { router: paymentsRouter, stripeWebhookHandler } = require('./payments');
 
 /* ================================
    CONFIG (Render env)
@@ -59,6 +62,14 @@ try {
 const app = express();
 app.use(helmet());
 app.use(cors({ origin: CORS_ORIGIN }));
+
+// ⬇️ NUEVO: Webhook de Stripe con RAW body (DEBE ir antes del JSON middleware)
+app.post('/webhooks/stripe', express.raw({ type: 'application/json' }), (req, res) => {
+  req.rawBody = req.body; // Buffer que Stripe usa para verificar firma
+  return stripeWebhookHandler(req, res);
+});
+
+// ⬇️ JSON middleware (después del webhook)
 app.use(express.json({ limit: '10mb' }));
 
 // Sonda de diagnóstico (saber qué archivo corre)
@@ -377,6 +388,11 @@ app.get('/messages', auth, async (req, res) => {
     return res.status(500).json({ error: 'LIST_FAILED' });
   }
 });
+
+/* ================================
+   ⬇️ NUEVO: montar rutas de pagos
+================================ */
+app.use('/payments', paymentsRouter);
 
 /* ================================
    START
