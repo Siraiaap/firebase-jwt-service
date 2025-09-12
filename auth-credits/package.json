@@ -10,6 +10,7 @@
     "firebase-admin": "^13.4.0",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
-    "libphonenumber-js": "^1.11.7"
+    "libphonenumber-js": "^1.11.7",
+    "stripe": "^14.0.0"
   }
 }
