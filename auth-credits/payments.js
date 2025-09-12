@@ -107,6 +107,12 @@ async function stripeWebhookHandler(req, res) {
     const pkg = Number(session.metadata && session.metadata.package_id || 0);
     const creditsToAdd = [25,50,100,250].includes(pkg) ? pkg : 0;
 
+    // 🚨 Parche: ignorar eventos sin sub
+    if (!sub) {
+      console.warn('[WEBHOOK] checkout.session.completed SIN sub -> ignorado (200 OK)');
+      return res.json({ ok: true, ignored: true, reason: 'missing_sub' });
+    }
+
     try {
       await db.runTransaction(async (tx) => {
         const orderRef = db.collection('orders').doc(sessionId);
