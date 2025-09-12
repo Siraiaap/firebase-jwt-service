@@ -9,9 +9,6 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { parsePhoneNumberFromString } = require('libphonenumber-js');
 
-// ⬇️ NUEVO: importamos el router de pagos y el handler del webhook
-const { router: paymentsRouter, stripeWebhookHandler } = require('./payments');
-
 /* ================================
    CONFIG (Render env)
 ================================ */
@@ -63,7 +60,10 @@ const app = express();
 app.use(helmet());
 app.use(cors({ origin: CORS_ORIGIN }));
 
-// ⬇️ NUEVO: Webhook de Stripe con RAW body (DEBE ir antes del JSON middleware)
+// ⬇️ IMPORTAR pagos **DESPUÉS** de initializeApp (¡clave!)
+const { router: paymentsRouter, stripeWebhookHandler } = require('./payments');
+
+// ⬇️ Webhook de Stripe con RAW body (DEBE ir antes del JSON middleware)
 app.post('/webhooks/stripe', express.raw({ type: 'application/json' }), (req, res) => {
   req.rawBody = req.body; // Buffer que Stripe usa para verificar firma
   return stripeWebhookHandler(req, res);
@@ -103,11 +103,7 @@ app.get('/diag/firestore', async (_req, res) => {
       project: serviceAccount?.project_id || null,
     });
   } catch (e) {
-    return res.status(500).json({
-      ok: false,
-      error: String(e?.message || e),
-      elapsed_ms: Date.now() - t0,
-    });
+    return res.status(500).json({ ok: false, error: String(e?.message || e), elapsed_ms: Date.now() - t0 });
   }
 });
 
@@ -118,19 +114,16 @@ if (!JWT_SECRET) {
   console.warn('⚠️ JWT_SECRET no está definido. Firma/verificación de JWT fallará.');
 }
 
-// A E.164 (+52…)
 function toE164(raw, defaultCountry = DEFAULT_COUNTRY) {
   const p = parsePhoneNumberFromString(String(raw || ''), defaultCountry);
   if (!p || !p.isValid()) throw new Error('PHONE_INVALID');
   return p.number;
 }
 
-// Hash anónimo por teléfono (ID)
 function phoneHash(e164) {
   return crypto.createHash('sha256').update(e164).digest('hex');
 }
 
-// Normaliza/valida apodo (2–32; letras con acentos/números/espacio/-/.’)
 function normalizeDisplayName(raw) {
   const txt = String(raw || '').trim();
   if (!txt) return '';
@@ -140,7 +133,6 @@ function normalizeDisplayName(raw) {
   return txt.replace(/\s+/g, ' ');
 }
 
-// Auth middleware: valida Bearer JWT
 function auth(req, res, next) {
   const h = req.headers['authorization'] || '';
   const token = h.startsWith('Bearer ') ? h.slice(7) : null;
@@ -158,17 +150,9 @@ function auth(req, res, next) {
    API
 ================================ */
 
-// /signup: alta o relogin (sin regalar créditos en relogin, pero actualiza apodo)
 app.post('/signup', async (req, res) => {
   try {
-    // Aceptamos phone (cualquier formato) o phone_e164
-    const {
-      display_name: rawDisplayName,
-      phone,
-      phone_e164: phoneE164Raw,
-      accept
-    } = req.body || {};
-
+    const { display_name: rawDisplayName, phone, phone_e164: phoneE164Raw, accept } = req.body || {};
     if (!accept) return res.status(409).json({ error: 'TERMS_NOT_ACCEPTED' });
 
     const display_name = normalizeDisplayName(rawDisplayName);
@@ -189,7 +173,6 @@ app.post('/signup', async (req, res) => {
     let is_new = false;
 
     if (!snap.exists) {
-      // Alta nueva → regalar créditos iniciales
       is_new = true;
       userData = {
         display_name,
@@ -200,7 +183,6 @@ app.post('/signup', async (req, res) => {
       };
       await userRef.set(userData);
     } else {
-      // Relogin → no regalar créditos; actualizar apodo si cambió
       userData = snap.data() || {};
       if (display_name && display_name !== userData.display_name) {
         await userRef.update({ display_name });
@@ -214,7 +196,6 @@ app.post('/signup', async (req, res) => {
       if (userData.credits_remaining == null) userData.credits_remaining = INITIAL_CREDITS;
     }
 
-    // JWT (mantenemos display_name por compatibilidad con tu front)
     const token = jwt.sign(
       { sub: userId, phone_e164, display_name: userData.display_name },
       JWT_SECRET,
@@ -243,7 +224,6 @@ app.post('/signup', async (req, res) => {
   }
 });
 
-// /me: devuelve datos del usuario (JWT requerido)
 app.get('/me', auth, async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -267,7 +247,6 @@ app.get('/me', auth, async (req, res) => {
   }
 });
 
-// /credits/debit: descuenta créditos con transacción (guarda flow/device)
 app.post('/credits/debit', auth, async (req, res) => {
   const userId = req.user.sub;
   const amount = Number(req.body?.amount || 1);
@@ -289,10 +268,7 @@ app.post('/credits/debit', auth, async (req, res) => {
       const total = Number(d.credits_total || 0);
 
       if (current < amount) {
-        return {
-          status: 402,
-          body: { ok: false, error: 'NO_CREDITS', credits_remaining: current, credits_total: total },
-        };
+        return { status: 402, body: { ok: false, error: 'NO_CREDITS', credits_remaining: current, credits_total: total } };
       }
 
       const newRemaining = current - amount;
@@ -313,19 +289,17 @@ app.post('/credits/debit', auth, async (req, res) => {
   }
 });
 
-// --- Helpers de mensajes (sanitiza y limita) ---
 function sanitizeRole(raw) {
   const r = String(raw || '').toLowerCase().trim();
   return (r === 'user' || r === 'assistant') ? r : '';
 }
 function sanitizeContent(raw) {
   let s = String(raw ?? '');
-  s = s.replace(/\s+/g, ' ').trim();         // compacta espacios
-  if (s.length > 4000) s = s.slice(0, 4000); // tope 4000 chars
+  s = s.replace(/\s+/g, ' ').trim();
+  if (s.length > 4000) s = s.slice(0, 4000);
   return s;
 }
 
-// --- POST /messages: guarda un turno ---
 app.post('/messages', auth, async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -344,13 +318,12 @@ app.post('/messages', auth, async (req, res) => {
       ts: admin.firestore.FieldValue.serverTimestamp()
     });
 
-    // Limpieza: mantener solo 100 más recientes (borrado best-effort)
     try {
       const olderSnap = await col.orderBy('ts', 'desc').offset(100).limit(50).get();
       const batch = db.batch();
       olderSnap.forEach(d => batch.delete(d.ref));
       if (!olderSnap.empty) await batch.commit();
-    } catch (_) { /* opcional, ignoramos errores de limpieza */ }
+    } catch (_) {}
 
     return res.json({ ok: true, id: docRef.id });
   } catch (e) {
@@ -359,7 +332,6 @@ app.post('/messages', auth, async (req, res) => {
   }
 });
 
-// --- GET /messages?limit=100: lista turnos (más nuevos primero) ---
 app.get('/messages', auth, async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -374,12 +346,7 @@ app.get('/messages', auth, async (req, res) => {
       const x = d.data() || {};
       let ts = null;
       if (x.ts?.toMillis) ts = x.ts.toMillis();
-      return {
-        id: d.id,
-        role: x.role || '',
-        content: x.content || '',
-        ts
-      };
+      return { id: d.id, role: x.role || '', content: x.content || '', ts };
     });
 
     return res.json({ items, count: items.length });
@@ -390,7 +357,7 @@ app.get('/messages', auth, async (req, res) => {
 });
 
 /* ================================
-   ⬇️ NUEVO: montar rutas de pagos
+   PAGOS
 ================================ */
 app.use('/payments', paymentsRouter);
 
