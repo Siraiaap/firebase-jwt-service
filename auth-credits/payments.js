@@ -33,11 +33,7 @@ const {
   STRIPE_PRICE_USD_100,
   STRIPE_PRICE_USD_250,
 
-  // Región por defecto si no detectamos nada
   DEFAULT_COUNTRY = 'MX',
-
-  // Ajustable: si no llega pkg, usamos base 25 con qty (1..10)
-  CHECKOUT_DEFAULT_PKG = '25',     // se usa si llega pkg vacío/ausente
   CHECKOUT_ADJUSTABLE_MIN = '1',
   CHECKOUT_ADJUSTABLE_MAX = '10'
 } = process.env;
@@ -63,7 +59,6 @@ function requireAuth(req, res, next) {
   }
 }
 
-// Región: MX si phone_e164 empieza con +52; fallback CF/AL/DEFAULT; otro => INTL (USD)
 function resolveRegion(req) {
   const phone = req.user?.phone_e164 || '';
   if (String(phone).startsWith('+52')) return 'MX';
@@ -71,7 +66,7 @@ function resolveRegion(req) {
   if (cf === 'MX') return 'MX';
   const al = String(req.headers['accept-language'] || '');
   if (/es-MX/i.test(al)) return 'MX';
-  const env = String(DEFAULT_COUNTRY || 'US').toUpperCase();
+  const env = String(process.env.DEFAULT_COUNTRY || 'US').toUpperCase();
   return env === 'MX' ? 'MX' : 'INTL';
 }
 
@@ -128,9 +123,9 @@ async function grantCreditsAtomic({ sub, amount, reason = 'stripe_checkout', met
 }
 
 /* =============================
-   Middleware de LOG (sin PII)
+   LOG mínimo
 ============================= */
-router.use(express.json({ limit: '2mb' })); // defensa si el router se monta aparte
+router.use(express.json({ limit: '2mb' }));
 router.use((req, _res, next) => {
   if (req.method === 'POST') {
     const url = req.originalUrl || req.url || '';
@@ -139,16 +134,14 @@ router.use((req, _res, next) => {
       const hasAuth = Boolean((req.headers.authorization || '').startsWith('Bearer '));
       const pkgBody = req.body?.pkg ?? req.body?.package_id ?? null;
       const pkgQuery = req.query?.pkg ?? req.query?.package_id ?? null;
-      console.log(
-        `[CHECKOUT] hit url=${url} auth=${hasAuth} pkgBody=${pkgBody} pkgQuery=${pkgQuery} origin=${req.headers.origin || 'n/a'}`
-      );
+      console.log(`[CHECKOUT] hit url=${url} auth=${hasAuth} pkgBody=${pkgBody} pkgQuery=${pkgQuery} origin=${req.headers.origin || 'n/a'}`);
     }
   }
   next();
 });
 
 /* =============================
-   CHECKOUT (creación de sesión)
+   CHECKOUT
 ============================= */
 async function createCheckoutSession(req, res) {
   try {
@@ -156,16 +149,15 @@ async function createCheckoutSession(req, res) {
     const sub = user.sub;
     const region = resolveRegion(req);
 
-    // 1) lee pkg (body -> query), 2) si no viene, usamos flujo AJUSTABLE con base 25
+    const successBase = FRONT_SUCCESS_URL || `${FRONTEND_URL}/?status=success`;
+    const cancelUrl   = FRONT_CANCEL_URL  || `${FRONTEND_URL}/?status=cancel`;
+
+    // 1) ¿mandó paquete explícito?
     let pkg =
       req.body?.package_id ?? req.body?.pkg ??
       req.query?.package_id ?? req.query?.pkg ?? null;
 
-    const successBase = FRONT_SUCCESS_URL || `${FRONTEND_URL}/?status=success`;
-    const cancelUrl   = FRONT_CANCEL_URL  || `${FRONTEND_URL}/?status=cancel`;
-
     if (pkg && allowedPackage(pkg)) {
-      // === Flujo normal (paquete explícito) ===
       const priceId = getPriceId({ region, pkg });
       if (!priceId) {
         console.warn('[CHECKOUT] price not configured', { region, pkg });
@@ -184,7 +176,7 @@ async function createCheckoutSession(req, res) {
           user_id: sub || '',
           phone_e164: user.phone_e164 || '',
           region,
-          package: String(pkg),           // ← paquete explícito
+          package: String(pkg),
           adjustable: '0',
           request_id: req.header('X-Request-ID') || ''
         }
@@ -193,8 +185,7 @@ async function createCheckoutSession(req, res) {
       return res.json({ url: session.url, session_url: session.url, region, pkg: String(pkg) });
     }
 
-    // === Flujo AJUSTABLE (sin pkg) ===
-    // Usamos SIEMPRE el price de 25 y habilitamos quantity en Checkout.
+    // 2) Flujo ajustable (25 por unidad) — mensaje aclaratorio
     const basePriceId = region === 'MX' ? STRIPE_PRICE_MXN_25 : STRIPE_PRICE_USD_25;
     if (!basePriceId) {
       console.warn('[CHECKOUT] missing base 25 price for region', region);
@@ -216,11 +207,14 @@ async function createCheckoutSession(req, res) {
       cancel_url: cancelUrl,
       allow_promotion_codes: true,
       billing_address_collection: 'auto',
+      // 👇 Texto visible cerca del botón de pagar
+      custom_text: {
+        submit: { message: 'Cada unidad = 25 consultas. Ajusta "Cant." para 50/100/250.' }
+      },
       metadata: {
         user_id: sub || '',
         phone_e164: user.phone_e164 || '',
         region,
-        // base de cálculo: 25 créditos por unidad
         adjustable: '1',
         base_unit_credits: '25',
         request_id: req.header('X-Request-ID') || ''
@@ -234,7 +228,7 @@ async function createCheckoutSession(req, res) {
   }
 }
 
-// Nueva y legacy
+/* rutas */
 router.post('/checkout/session', requireAuth, createCheckoutSession);
 router.post('/payments/create-checkout-session', requireAuth, createCheckoutSession);
 
@@ -255,9 +249,7 @@ async function stripeWebhookHandler(req, res) {
   // Idempotencia por evento
   const evRef = db.collection('stripe_events').doc(event.id);
   const evSnap = await evRef.get();
-  if (evSnap.exists) {
-    return res.json({ received: true, duplicate: true });
-  }
+  if (evSnap.exists) return res.json({ received: true, duplicate: true });
 
   try {
     if (event.type === 'checkout.session.completed') {
@@ -269,16 +261,13 @@ async function stripeWebhookHandler(req, res) {
       let creditsToAdd = 0;
       let pkg = md.package || md.package_id || null;
 
-      // Si fue flujo ajustable, obtenemos la cantidad final desde Stripe
       if (md.adjustable === '1' || md.base_unit_credits) {
         const baseUnit = parseInt(md.base_unit_credits || '25', 10);
-        // Recupera line_items para conocer la quantity elegida por el usuario
         const full = await stripe.checkout.sessions.retrieve(sessionId, { expand: ['line_items'] });
         const qty = (full.line_items?.data || []).reduce((s, li) => s + (li.quantity || 0), 0) || 1;
         creditsToAdd = baseUnit * qty;
-        pkg = String(creditsToAdd); // para registrar en orden (25/50/100/250)
+        pkg = String(creditsToAdd);
       } else {
-        // Paquete explícito
         creditsToAdd = creditsForPackage(pkg);
       }
 
@@ -288,7 +277,6 @@ async function stripeWebhookHandler(req, res) {
         return res.json({ ok: true, ignored: true });
       }
 
-      // Idempotencia por orden / sesión
       const orderRef = db.collection('orders').doc(sessionId);
       const orderSnap = await orderRef.get();
       if (orderSnap.exists && orderSnap.data()?.status === 'paid') {
@@ -296,15 +284,12 @@ async function stripeWebhookHandler(req, res) {
         return res.json({ received: true, duplicate_order: true });
       }
 
-      // ¿primera compra?
       const prevPaid = await db.collection('orders')
         .where('user_id', '==', sub)
         .where('status', '==', 'paid')
-        .limit(1)
-        .get();
+        .limit(1).get();
       const first_purchase = prevPaid.empty;
 
-      // Acreditar
       const grant = await grantCreditsAtomic({
         sub,
         amount: creditsToAdd,
@@ -312,10 +297,9 @@ async function stripeWebhookHandler(req, res) {
         meta: { pkg: String(pkg), region, session_id: sessionId, event_id: event.id }
       });
 
-      // Guardar orden
       await orderRef.set({
         user_id: sub,
-        package: String(pkg),            // 25/50/100/250 resultante
+        package: String(pkg),
         region,
         status: 'paid',
         reward_given: false,
@@ -328,21 +312,11 @@ async function stripeWebhookHandler(req, res) {
         updated_at: new Date()
       }, { merge: true });
 
-      // Guardar evento
-      await evRef.set({
-        type: event.type,
-        session_id: sessionId,
-        processed_at: new Date()
-      });
-
+      await evRef.set({ type: event.type, session_id: sessionId, processed_at: new Date() });
       return res.json({ received: true, credited: grant.ok, new_balance: grant.new_balance });
     }
 
-    // Otros eventos
-    await evRef.set({
-      type: event.type,
-      processed_at: new Date()
-    });
+    await evRef.set({ type: event.type, processed_at: new Date() });
     return res.json({ received: true });
   } catch (e) {
     console.error('webhook processing error:', e?.message || e);
@@ -351,7 +325,7 @@ async function stripeWebhookHandler(req, res) {
 }
 
 /* =============================
-   Diagnóstico seguro (sin secretos)
+   Diagnóstico
 ============================= */
 function hasPrice(k) {
   const v = process.env[k] || '';
@@ -376,12 +350,7 @@ router.get('/diag/payments', (_req, res) => {
         '250': hasPrice('STRIPE_PRICE_USD_250'),
       }
     },
-    adjustable_fallback: {
-      enabled_when_pkg_missing: true,
-      base_unit_credits: 25,
-      min: Number(CHECKOUT_ADJUSTABLE_MIN || '1'),
-      max: Number(CHECKOUT_ADJUSTABLE_MAX || '10'),
-    }
+    adjustable_note: 'Cada unidad = 25 consultas. Ajusta "Cant." para 50/100/250.'
   });
 });
 
