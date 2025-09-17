@@ -10,7 +10,7 @@ const jwt = require('jsonwebtoken');
 const db = admin.firestore();
 
 // =============================
-// Stripe
+// Stripe / ENV
 // =============================
 const {
   STRIPE_SECRET_KEY,
@@ -18,20 +18,16 @@ const {
 
   // Front URLs
   FRONTEND_URL = 'https://siraia.com',
-  FRONT_SUCCESS_URL, // opcional (si lo defines, tiene prioridad)
+  FRONT_SUCCESS_URL, // opcional (si existe, tiene prioridad)
   FRONT_CANCEL_URL,  // opcional
 
-  // === NUEVO esquema (recomendado): paquetes 10 / 30 ===
-  PRICE_ID_MX_10,
-  PRICE_ID_INTL_10,
-  PRICE_ID_MX_30,
-  PRICE_ID_INTL_30,
-
-  // === LEGACY (compat): 25 / 50 / 100 / 250 ===
+  // Precios MXN
   STRIPE_PRICE_MXN_25,
   STRIPE_PRICE_MXN_50,
   STRIPE_PRICE_MXN_100,
   STRIPE_PRICE_MXN_250,
+
+  // Precios USD
   STRIPE_PRICE_USD_25,
   STRIPE_PRICE_USD_50,
   STRIPE_PRICE_USD_100,
@@ -47,11 +43,11 @@ if (!STRIPE_WEBHOOK_SECRET) {
   console.warn('⚠️ Falta STRIPE_WEBHOOK_SECRET (necesario para validar el webhook)');
 }
 
-// Mantengo tu versión Stripe para no romper compatibilidad con lib v14
+// Mantengo apiVersion de tu lib v14 para compat
 const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
 
 // =============================
-// Helpers (auth, región, prices)
+// Helpers
 // =============================
 function requireAuth(req, res, next) {
   try {
@@ -61,12 +57,12 @@ function requireAuth(req, res, next) {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     req.user = payload; // { sub, phone_e164, display_name? }
     next();
-  } catch (e) {
+  } catch (_e) {
     return res.status(401).json({ error: 'INVALID_TOKEN' });
   }
 }
 
-// Región: MX si phone_e164 empieza con +52 o si headers/DEFAULT apuntan a MX; else INTL
+// Región: MX si phone_e164 empieza con +52; fallback por CF/AL/DEFAULT; otro => INTL(USD)
 function resolveRegion(req) {
   const phone = req.user?.phone_e164 || '';
   if (String(phone).startsWith('+52')) return 'MX';
@@ -80,45 +76,32 @@ function resolveRegion(req) {
 
 function allowedPackage(pkg) {
   const s = String(pkg);
-  return ['10', '30', '25', '50', '100', '250'].includes(s);
+  return ['25', '50', '100', '250'].includes(s);
 }
 
 function creditsForPackage(pkg) {
   const n = Number(pkg);
-  if ([10, 30, 25, 50, 100, 250].includes(n)) return n;
-  return 0;
+  return [25, 50, 100, 250].includes(n) ? n : 0;
 }
 
 function getPriceId({ region, pkg }) {
-  const key = `${region}_${String(pkg)}`;
-
-  // Nuevo esquema (10 / 30)
-  const newMap = {
-    'MX_10': PRICE_ID_MX_10,
-    'INTL_10': PRICE_ID_INTL_10,
-    'MX_30': PRICE_ID_MX_30,
-    'INTL_30': PRICE_ID_INTL_30
-  };
-  if (newMap[key]) return newMap[key];
-
-  // Legacy (25 / 50 / 100 / 250)
+  const p = String(pkg);
   if (region === 'MX') {
-    const legacyMX = {
+    const map = {
       '25': STRIPE_PRICE_MXN_25,
       '50': STRIPE_PRICE_MXN_50,
       '100': STRIPE_PRICE_MXN_100,
       '250': STRIPE_PRICE_MXN_250
     };
-    return legacyMX[String(pkg)] || null;
-  } else {
-    const legacyUS = {
-      '25': STRIPE_PRICE_USD_25,
-      '50': STRIPE_PRICE_USD_50,
-      '100': STRIPE_PRICE_USD_100,
-      '250': STRIPE_PRICE_USD_250
-    };
-    return legacyUS[String(pkg)] || null;
+    return map[p] || null;
   }
+  const map = {
+    '25': STRIPE_PRICE_USD_25,
+    '50': STRIPE_PRICE_USD_50,
+    '100': STRIPE_PRICE_USD_100,
+    '250': STRIPE_PRICE_USD_250
+  };
+  return map[p] || null;
 }
 
 async function grantCreditsAtomic({ sub, amount, reason = 'stripe_checkout', meta = {} }) {
@@ -146,18 +129,16 @@ async function grantCreditsAtomic({ sub, amount, reason = 'stripe_checkout', met
 }
 
 // =============================
-// CHECKOUT (Opción B, API)
+// CHECKOUT (creación de sesión)
 // =============================
-
-// Handler compartido para crear la sesión (lo usamos en 2 rutas)
 async function createCheckoutSession(req, res) {
   try {
     const user = req.user || {};
     const sub = user.sub;
-    const pkg = String(req.body?.package_id || req.body?.pkg || ''); // soporta {package_id} o {pkg}
+    const pkg = String(req.body?.package_id || req.body?.pkg || ''); // soporta {package_id} y {pkg}
 
     if (!allowedPackage(pkg)) {
-      return res.status(400).json({ error: 'INVALID_PACKAGE', allowed: ['10','30','25','50','100','250'] });
+      return res.status(400).json({ error: 'INVALID_PACKAGE', allowed: ['25','50','100','250'] });
     }
 
     const region = resolveRegion(req);
@@ -171,7 +152,7 @@ async function createCheckoutSession(req, res) {
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
-      client_reference_id: sub, // útil para fallback en webhook
+      client_reference_id: sub, // fallback útil en webhook
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${successBase}&pkg=${encodeURIComponent(pkg)}&sid={CHECKOUT_SESSION_ID}`,
       cancel_url: cancelUrl,
@@ -187,24 +168,28 @@ async function createCheckoutSession(req, res) {
       }
     });
 
-    // Respuesta simple
-    return res.json({ url: session.url });
+    // 🔑 Compatibilidad: devolvemos ambas claves
+    return res.json({
+      url: session.url,
+      session_url: session.url,
+      region,
+      pkg: String(pkg)
+    });
   } catch (e) {
     console.error('checkout/session error:', e?.message || e);
     return res.status(500).json({ error: 'SESSION_FAILED' });
   }
 }
 
-// Nuevo canónico
+// Rutas: nueva y legacy
 router.post('/checkout/session', requireAuth, createCheckoutSession);
-// Alias legacy (mantiene compatibilidad con tu front si apuntaba aquí)
 router.post('/payments/create-checkout-session', requireAuth, createCheckoutSession);
 
 // =============================
 // WEBHOOK
 // =============================
 async function stripeWebhookHandler(req, res) {
-  // req.rawBody fue puesto por index.js (express.raw)
+  // req.rawBody fue colocado por index.js (express.raw)
   const sig = req.headers['stripe-signature'];
   let event;
 
@@ -230,7 +215,6 @@ async function stripeWebhookHandler(req, res) {
       const sub = session.client_reference_id || md.user_id || md.sub || '';
       const pkg = md.package || md.package_id || '';
       const region = md.region || 'INTL';
-
       const creditsToAdd = creditsForPackage(pkg);
 
       if (!sub) {
@@ -239,7 +223,7 @@ async function stripeWebhookHandler(req, res) {
         return res.json({ ok: true, ignored: true });
       }
 
-      // Idempotencia por orden (sesión)
+      // Idempotencia por orden / sesión
       const orderRef = db.collection('orders').doc(sessionId);
       const orderSnap = await orderRef.get();
       if (orderSnap.exists && orderSnap.data()?.status === 'paid') {
@@ -247,7 +231,7 @@ async function stripeWebhookHandler(req, res) {
         return res.json({ received: true, duplicate_order: true });
       }
 
-      // ¿Es primera compra del usuario?
+      // ¿primera compra?
       const prevPaid = await db.collection('orders')
         .where('user_id', '==', sub)
         .where('status', '==', 'paid')
@@ -255,7 +239,7 @@ async function stripeWebhookHandler(req, res) {
         .get();
       const first_purchase = prevPaid.empty;
 
-      // Acreditar créditos (transacción atómica)
+      // Acreditar
       const grant = await grantCreditsAtomic({
         sub,
         amount: creditsToAdd,
@@ -269,16 +253,15 @@ async function stripeWebhookHandler(req, res) {
         package: String(pkg),
         region,
         status: 'paid',
-        reward_given: false,      // para Referidos (Bloque C)
+        reward_given: false,
         first_purchase,
-        // Datos útiles de auditoría (no PII)
         amount_total: session.amount_total ? session.amount_total / 100 : null,
         currency: session.currency || null,
         created_at: new Date(),
         updated_at: new Date()
       }, { merge: true });
 
-      // Guardar evento como procesado
+      // Guardar evento
       await evRef.set({
         type: event.type,
         session_id: sessionId,
@@ -288,7 +271,7 @@ async function stripeWebhookHandler(req, res) {
       return res.json({ received: true, credited: grant.ok, new_balance: grant.new_balance });
     }
 
-    // Otros eventos: solo registrar
+    // Otros eventos
     await evRef.set({
       type: event.type,
       processed_at: new Date()
@@ -296,9 +279,37 @@ async function stripeWebhookHandler(req, res) {
     return res.json({ received: true });
   } catch (e) {
     console.error('webhook processing error:', e?.message || e);
-    // No marcamos el evento como procesado para permitir reintento
     return res.status(500).json({ error: 'WEBHOOK_TX_FAILED' });
   }
 }
+
+// =============================
+// Diagnóstico seguro (sin secretos)
+// =============================
+function hasPrice(k) {
+  const v = process.env[k] || '';
+  return Boolean(v && v.startsWith('price_'));
+}
+router.get('/diag/payments', (_req, res) => {
+  res.json({
+    ok: true,
+    present: {
+      STRIPE_SECRET_KEY: Boolean(STRIPE_SECRET_KEY),
+      STRIPE_WEBHOOK_SECRET: Boolean(STRIPE_WEBHOOK_SECRET),
+      MXN: {
+        '25': hasPrice('STRIPE_PRICE_MXN_25'),
+        '50': hasPrice('STRIPE_PRICE_MXN_50'),
+        '100': hasPrice('STRIPE_PRICE_MXN_100'),
+        '250': hasPrice('STRIPE_PRICE_MXN_250'),
+      },
+      USD: {
+        '25': hasPrice('STRIPE_PRICE_USD_25'),
+        '50': hasPrice('STRIPE_PRICE_USD_50'),
+        '100': hasPrice('STRIPE_PRICE_USD_100'),
+        '250': hasPrice('STRIPE_PRICE_USD_250'),
+      }
+    }
+  });
+});
 
 module.exports = { router, stripeWebhookHandler };
