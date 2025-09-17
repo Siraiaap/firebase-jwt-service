@@ -9,9 +9,9 @@ const jwt = require('jsonwebtoken');
 
 const db = admin.firestore();
 
-// =============================
-// Stripe / ENV
-// =============================
+/* =============================
+   ENV / Stripe
+============================= */
 const {
   STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET,
@@ -36,19 +36,14 @@ const {
   DEFAULT_COUNTRY = 'MX'
 } = process.env;
 
-if (!STRIPE_SECRET_KEY) {
-  console.warn('⚠️ Falta STRIPE_SECRET_KEY');
-}
-if (!STRIPE_WEBHOOK_SECRET) {
-  console.warn('⚠️ Falta STRIPE_WEBHOOK_SECRET (necesario para validar el webhook)');
-}
+if (!STRIPE_SECRET_KEY) console.warn('⚠️ Falta STRIPE_SECRET_KEY');
+if (!STRIPE_WEBHOOK_SECRET) console.warn('⚠️ Falta STRIPE_WEBHOOK_SECRET');
 
-// Mantengo apiVersion de tu lib v14 para compat
 const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
 
-// =============================
-// Helpers
-// =============================
+/* =============================
+   Helpers
+============================= */
 function requireAuth(req, res, next) {
   try {
     const hdr = req.headers.authorization || '';
@@ -62,7 +57,7 @@ function requireAuth(req, res, next) {
   }
 }
 
-// Región: MX si phone_e164 empieza con +52; fallback por CF/AL/DEFAULT; otro => INTL(USD)
+// Región: MX si phone_e164 empieza con +52; fallback CF/AL/DEFAULT; otro => INTL (USD)
 function resolveRegion(req) {
   const phone = req.user?.phone_e164 || '';
   if (String(phone).startsWith('+52')) return 'MX';
@@ -128,9 +123,29 @@ async function grantCreditsAtomic({ sub, amount, reason = 'stripe_checkout', met
   return { ok: true, new_balance: newBal };
 }
 
-// =============================
-// CHECKOUT (creación de sesión)
-// =============================
+/* =============================
+   Middleware de LOG (sin PII)
+   - Verifica que el hit llegue al backend
+   - No imprime tokens ni teléfonos
+============================= */
+router.use((req, _res, next) => {
+  if (req.method === 'POST') {
+    const url = req.originalUrl || req.url || '';
+    const isCheckout = url.includes('/checkout/session') || url.includes('/create-checkout-session');
+    if (isCheckout) {
+      const hasAuth = Boolean((req.headers.authorization || '').startsWith('Bearer '));
+      const pkg = req.body?.pkg ?? req.body?.package_id ?? null;
+      console.log(
+        `[CHECKOUT] hit url=${url} auth=${hasAuth} pkg=${pkg} origin=${req.headers.origin || 'n/a'}`
+      );
+    }
+  }
+  next();
+});
+
+/* =============================
+   CHECKOUT (creación de sesión)
+============================= */
 async function createCheckoutSession(req, res) {
   try {
     const user = req.user || {};
@@ -138,12 +153,14 @@ async function createCheckoutSession(req, res) {
     const pkg = String(req.body?.package_id || req.body?.pkg || ''); // soporta {package_id} y {pkg}
 
     if (!allowedPackage(pkg)) {
+      console.warn('[CHECKOUT] invalid package', pkg);
       return res.status(400).json({ error: 'INVALID_PACKAGE', allowed: ['25','50','100','250'] });
     }
 
     const region = resolveRegion(req);
     const priceId = getPriceId({ region, pkg });
     if (!priceId) {
+      console.warn('[CHECKOUT] price not configured', { region, pkg });
       return res.status(500).json({ error: 'PRICE_NOT_CONFIGURED', region, pkg });
     }
 
@@ -168,7 +185,7 @@ async function createCheckoutSession(req, res) {
       }
     });
 
-    // 🔑 Compatibilidad: devolvemos ambas claves
+    // Compatibilidad con front: devolvemos ambas claves
     return res.json({
       url: session.url,
       session_url: session.url,
@@ -181,13 +198,13 @@ async function createCheckoutSession(req, res) {
   }
 }
 
-// Rutas: nueva y legacy
+// Nueva y legacy
 router.post('/checkout/session', requireAuth, createCheckoutSession);
 router.post('/payments/create-checkout-session', requireAuth, createCheckoutSession);
 
-// =============================
-// WEBHOOK
-// =============================
+/* =============================
+   WEBHOOK
+============================= */
 async function stripeWebhookHandler(req, res) {
   // req.rawBody fue colocado por index.js (express.raw)
   const sig = req.headers['stripe-signature'];
@@ -218,7 +235,7 @@ async function stripeWebhookHandler(req, res) {
       const creditsToAdd = creditsForPackage(pkg);
 
       if (!sub) {
-        console.warn('[WEBHOOK] checkout.session.completed SIN sub -> ignorado (200 OK)');
+        console.warn('[WEBHOOK] checkout.session.completed SIN sub -> ignorado');
         await evRef.set({ type: event.type, session_id: sessionId, processed_at: new Date(), ignored: true, reason: 'missing_sub' });
         return res.json({ ok: true, ignored: true });
       }
@@ -283,9 +300,9 @@ async function stripeWebhookHandler(req, res) {
   }
 }
 
-// =============================
-// Diagnóstico seguro (sin secretos)
-// =============================
+/* =============================
+   Diagnóstico seguro (sin secretos)
+============================= */
 function hasPrice(k) {
   const v = process.env[k] || '';
   return Boolean(v && v.startsWith('price_'));
