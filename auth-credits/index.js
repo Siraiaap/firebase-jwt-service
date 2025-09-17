@@ -57,27 +57,39 @@ try {
    APP + middlewares
 ================================ */
 const app = express();
+
+// Seguridad básica (no toca el body)
 app.use(helmet());
+
+// CORS (mininmo necesario)
 app.use(cors({ origin: CORS_ORIGIN }));
 
-// ⬇️ IMPORTAR pagos **DESPUÉS** de initializeApp (¡clave!)
+/* ================================
+   IMPORTS de pagos (después de init Firebase)
+   Exporta: { router, stripeWebhookHandler }
+================================ */
 const { router: paymentsRouter, stripeWebhookHandler } = require('./payments');
 
-// ⬇️ Webhook de Stripe con RAW body (DEBE ir antes del JSON middleware)
-app.post('/webhooks/stripe', express.raw({ type: 'application/json' }), (req, res) => {
-  req.rawBody = req.body; // Buffer que Stripe usa para verificar firma
+/* ================================
+   WEBHOOK STRIPE (RAW) — Debe ir ANTES del json()
+   Ruta canónica acordada: /stripe/webhook
+================================ */
+app.post('/stripe/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+  // Buffer crudo para verificar firma Stripe
+  req.rawBody = req.body;
   return stripeWebhookHandler(req, res);
 });
 
-// ⬇️ JSON middleware (después del webhook)
+// JSON middleware para el resto de rutas
 app.use(express.json({ limit: '10mb' }));
 
-// Sonda de diagnóstico (saber qué archivo corre)
+/* ================================
+   DIAGNÓSTICO
+================================ */
 app.get('/__whoami', (_req, res) => {
   res.json({ from: __filename, marker: 'auth-credits-index', now: Date.now() });
 });
 
-// Health (con sello de versión)
 app.get('/health', (_req, res) => {
   res.json({
     ok: true,
@@ -88,7 +100,6 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// Diagnóstico Firestore
 app.get('/diag/firestore', async (_req, res) => {
   const t0 = Date.now();
   try {
@@ -108,7 +119,7 @@ app.get('/diag/firestore', async (_req, res) => {
 });
 
 /* ================================
-   HELPERS
+   HELPERS (auth, normalizadores)
 ================================ */
 if (!JWT_SECRET) {
   console.warn('⚠️ JWT_SECRET no está definido. Firma/verificación de JWT fallará.');
@@ -147,9 +158,8 @@ function auth(req, res, next) {
 }
 
 /* ================================
-   API
+   API CORE (signup / me / debit / messages)
 ================================ */
-
 app.post('/signup', async (req, res) => {
   try {
     const { display_name: rawDisplayName, phone, phone_e164: phoneE164Raw, accept } = req.body || {};
@@ -164,7 +174,7 @@ app.post('/signup', async (req, res) => {
     const phone_e164 = phoneE164Raw ? String(phoneE164Raw) : toE164(inputPhone, DEFAULT_COUNTRY);
     const userId = phoneHash(phone_e164);
 
-    console.log(`[SIGNUP] project=${serviceAccount?.project_id} userId=${userId} phone=${phone_e164}`);
+    console.log(`[SIGNUP] project=${serviceAccount?.project_id} userId=${userId}`);
 
     const userRef = db.collection('users').doc(userId);
     const snap = await userRef.get();
@@ -358,8 +368,11 @@ app.get('/messages', auth, async (req, res) => {
 
 /* ================================
    PAGOS
+   - Montamos el router en raíz para exponer /checkout/session
+   - Alias en /payments/* para compatibilidad
 ================================ */
-app.use('/payments', paymentsRouter);
+app.use(paymentsRouter);
+app.use('/payments', paymentsRouter); // alias opcional
 
 /* ================================
    START
