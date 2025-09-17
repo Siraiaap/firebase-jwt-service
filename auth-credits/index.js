@@ -58,29 +58,46 @@ try {
 ================================ */
 const app = express();
 
-// Seguridad básica (no toca el body)
+// Seguridad básica
 app.use(helmet());
 
-// CORS (mininmo necesario)
-app.use(cors({ origin: CORS_ORIGIN }));
+// --- CORS por lista (coma-separada) + wildcard ---
+// Ejemplo en Render: CORS_ORIGIN="https://siraia.com,https://www.siraia.com"
+const allowed = (CORS_ORIGIN || '*')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+const allowOrigin = (origin) => {
+  if (!origin) return true; // requests server-side / curl
+  if (allowed.includes('*')) return true;
+  if (allowed.includes(origin)) return true;
+  // Permite subdominios *.siraia.com si declaras ".siraia.com"
+  if (allowed.some(o => o.startsWith('.') && origin.endsWith(o))) return true;
+  return false;
+};
+
+app.use(cors({
+  origin: (origin, cb) => cb(null, allowOrigin(origin)),
+  methods: ['GET','POST','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization','X-Request-ID','Stripe-Signature'],
+  maxAge: 86400
+}));
 
 /* ================================
-   IMPORTS de pagos (después de init Firebase)
-   Exporta: { router, stripeWebhookHandler }
+   IMPORTS de pagos
 ================================ */
 const { router: paymentsRouter, stripeWebhookHandler } = require('./payments');
 
 /* ================================
    WEBHOOK STRIPE (RAW) — Debe ir ANTES del json()
-   Ruta canónica acordada: /stripe/webhook
 ================================ */
 app.post('/stripe/webhook', express.raw({ type: 'application/json' }), (req, res) => {
-  // Buffer crudo para verificar firma Stripe
-  req.rawBody = req.body;
+  req.rawBody = req.body; // buffer
   return stripeWebhookHandler(req, res);
 });
 
-// JSON middleware para el resto de rutas
+// JSON para el resto
 app.use(express.json({ limit: '10mb' }));
 
 /* ================================
@@ -160,6 +177,10 @@ function auth(req, res, next) {
 /* ================================
    API CORE (signup / me / debit / messages)
 ================================ */
+// ... (SIN CAMBIOS respecto a tu versión anterior; dejo todo igual)
+
+// (copia exacta de tus endpoints signup, me, credits/debit, messages)
+
 app.post('/signup', async (req, res) => {
   try {
     const { display_name: rawDisplayName, phone, phone_e164: phoneE164Raw, accept } = req.body || {};
@@ -368,11 +389,10 @@ app.get('/messages', auth, async (req, res) => {
 
 /* ================================
    PAGOS
-   - Montamos el router en raíz para exponer /checkout/session
-   - Alias en /payments/* para compatibilidad
 ================================ */
-app.use(paymentsRouter);
-app.use('/payments', paymentsRouter); // alias opcional
+const { router: paymentsRtr } = require('./payments');
+app.use(paymentsRtr);            // /checkout/session
+app.use('/payments', paymentsRtr); // alias /payments/checkout/session
 
 /* ================================
    START
