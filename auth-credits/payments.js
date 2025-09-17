@@ -18,16 +18,16 @@ const {
 
   // Front URLs
   FRONTEND_URL = 'https://siraia.com',
-  FRONT_SUCCESS_URL, // opcional (si existe, tiene prioridad)
-  FRONT_CANCEL_URL,  // opcional
+  FRONT_SUCCESS_URL,
+  FRONT_CANCEL_URL,
 
-  // Precios MXN (25/50/100/250)
+  // Precios MXN
   STRIPE_PRICE_MXN_25,
   STRIPE_PRICE_MXN_50,
   STRIPE_PRICE_MXN_100,
   STRIPE_PRICE_MXN_250,
 
-  // Precios USD (25/50/100/250)
+  // Precios USD
   STRIPE_PRICE_USD_25,
   STRIPE_PRICE_USD_50,
   STRIPE_PRICE_USD_100,
@@ -123,9 +123,9 @@ async function grantCreditsAtomic({ sub, amount, reason = 'stripe_checkout', met
 }
 
 /* =============================
-   LOG mínimo
+   LOG de entrada a checkout
 ============================= */
-router.use(express.json({ limit: '2mb' }));
+router.use(express.json({ limit: '2mb' })); // defensa
 router.use((req, _res, next) => {
   if (req.method === 'POST') {
     const url = req.originalUrl || req.url || '';
@@ -152,7 +152,7 @@ async function createCheckoutSession(req, res) {
     const successBase = FRONT_SUCCESS_URL || `${FRONTEND_URL}/?status=success`;
     const cancelUrl   = FRONT_CANCEL_URL  || `${FRONTEND_URL}/?status=cancel`;
 
-    // 1) ¿mandó paquete explícito?
+    // ¿paquete explícito?
     let pkg =
       req.body?.package_id ?? req.body?.pkg ??
       req.query?.package_id ?? req.query?.pkg ?? null;
@@ -185,7 +185,7 @@ async function createCheckoutSession(req, res) {
       return res.json({ url: session.url, session_url: session.url, region, pkg: String(pkg) });
     }
 
-    // 2) Flujo ajustable (25 por unidad) — mensaje aclaratorio
+    // Flujo ajustable (25 por unidad) con texto aclaratorio
     const basePriceId = region === 'MX' ? STRIPE_PRICE_MXN_25 : STRIPE_PRICE_USD_25;
     if (!basePriceId) {
       console.warn('[CHECKOUT] missing base 25 price for region', region);
@@ -207,7 +207,6 @@ async function createCheckoutSession(req, res) {
       cancel_url: cancelUrl,
       allow_promotion_codes: true,
       billing_address_collection: 'auto',
-      // 👇 Texto visible cerca del botón de pagar
       custom_text: {
         submit: { message: 'Cada unidad = 25 consultas. Ajusta "Cant." para 50/100/250.' }
       },
@@ -228,7 +227,6 @@ async function createCheckoutSession(req, res) {
   }
 }
 
-/* rutas */
 router.post('/checkout/session', requireAuth, createCheckoutSession);
 router.post('/payments/create-checkout-session', requireAuth, createCheckoutSession);
 
@@ -246,10 +244,15 @@ async function stripeWebhookHandler(req, res) {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
+  console.log(`[WEBHOOK] received type=${event.type} id=${event.id}`);
+
   // Idempotencia por evento
   const evRef = db.collection('stripe_events').doc(event.id);
   const evSnap = await evRef.get();
-  if (evSnap.exists) return res.json({ received: true, duplicate: true });
+  if (evSnap.exists) {
+    console.log(`[WEBHOOK] duplicate event ${event.id}`);
+    return res.json({ received: true, duplicate: true });
+  }
 
   try {
     if (event.type === 'checkout.session.completed') {
@@ -267,8 +270,10 @@ async function stripeWebhookHandler(req, res) {
         const qty = (full.line_items?.data || []).reduce((s, li) => s + (li.quantity || 0), 0) || 1;
         creditsToAdd = baseUnit * qty;
         pkg = String(creditsToAdd);
+        console.log(`[WEBHOOK] adjustable qty=${qty} -> credits=${creditsToAdd}`);
       } else {
         creditsToAdd = creditsForPackage(pkg);
+        console.log(`[WEBHOOK] fixed pkg=${pkg} -> credits=${creditsToAdd}`);
       }
 
       if (!sub) {
@@ -277,19 +282,23 @@ async function stripeWebhookHandler(req, res) {
         return res.json({ ok: true, ignored: true });
       }
 
+      // Idempotencia por orden / sesión
       const orderRef = db.collection('orders').doc(sessionId);
       const orderSnap = await orderRef.get();
       if (orderSnap.exists && orderSnap.data()?.status === 'paid') {
         await evRef.set({ type: event.type, session_id: sessionId, processed_at: new Date(), duplicate_order: true });
+        console.log(`[WEBHOOK] duplicate order for session ${sessionId}`);
         return res.json({ received: true, duplicate_order: true });
       }
 
+      // ¿primera compra?
       const prevPaid = await db.collection('orders')
         .where('user_id', '==', sub)
         .where('status', '==', 'paid')
         .limit(1).get();
       const first_purchase = prevPaid.empty;
 
+      // Acreditar
       const grant = await grantCreditsAtomic({
         sub,
         amount: creditsToAdd,
@@ -313,10 +322,13 @@ async function stripeWebhookHandler(req, res) {
       }, { merge: true });
 
       await evRef.set({ type: event.type, session_id: sessionId, processed_at: new Date() });
+
+      console.log(`[WEBHOOK OK] event=${event.id} session=${sessionId} credited=${creditsToAdd}`);
       return res.json({ received: true, credited: grant.ok, new_balance: grant.new_balance });
     }
 
     await evRef.set({ type: event.type, processed_at: new Date() });
+    console.log(`[WEBHOOK] ignored type=${event.type}`);
     return res.json({ received: true });
   } catch (e) {
     console.error('webhook processing error:', e?.message || e);
@@ -349,8 +361,7 @@ router.get('/diag/payments', (_req, res) => {
         '100': hasPrice('STRIPE_PRICE_USD_100'),
         '250': hasPrice('STRIPE_PRICE_USD_250'),
       }
-    },
-    adjustable_note: 'Cada unidad = 25 consultas. Ajusta "Cant." para 50/100/250.'
+    }
   });
 });
 
