@@ -33,7 +33,8 @@ const {
   STRIPE_PRICE_USD_100,
   STRIPE_PRICE_USD_250,
 
-  DEFAULT_COUNTRY = 'MX'
+  DEFAULT_COUNTRY = 'MX',
+  CHECKOUT_DEFAULT_PKG = '25' // ← NUEVO: fallback si el front no manda paquete
 } = process.env;
 
 if (!STRIPE_SECRET_KEY) console.warn('⚠️ Falta STRIPE_SECRET_KEY');
@@ -125,18 +126,18 @@ async function grantCreditsAtomic({ sub, amount, reason = 'stripe_checkout', met
 
 /* =============================
    Middleware de LOG (sin PII)
-   - Verifica que el hit llegue al backend
-   - No imprime tokens ni teléfonos
 ============================= */
+router.use(express.json({ limit: '2mb' })); // por si se usa el router suelto (defensa)
 router.use((req, _res, next) => {
   if (req.method === 'POST') {
     const url = req.originalUrl || req.url || '';
     const isCheckout = url.includes('/checkout/session') || url.includes('/create-checkout-session');
     if (isCheckout) {
       const hasAuth = Boolean((req.headers.authorization || '').startsWith('Bearer '));
-      const pkg = req.body?.pkg ?? req.body?.package_id ?? null;
+      const pkgBody = req.body?.pkg ?? req.body?.package_id ?? null;
+      const pkgQuery = req.query?.pkg ?? req.query?.package_id ?? null;
       console.log(
-        `[CHECKOUT] hit url=${url} auth=${hasAuth} pkg=${pkg} origin=${req.headers.origin || 'n/a'}`
+        `[CHECKOUT] hit url=${url} auth=${hasAuth} pkgBody=${pkgBody} pkgQuery=${pkgQuery} origin=${req.headers.origin || 'n/a'}`
       );
     }
   }
@@ -150,7 +151,14 @@ async function createCheckoutSession(req, res) {
   try {
     const user = req.user || {};
     const sub = user.sub;
-    const pkg = String(req.body?.package_id || req.body?.pkg || ''); // soporta {package_id} y {pkg}
+
+    // 1) intenta body, 2) query, 3) default .env (25)
+    let pkg =
+      req.body?.package_id ?? req.body?.pkg ??
+      req.query?.package_id ?? req.query?.pkg ??
+      CHECKOUT_DEFAULT_PKG;
+
+    pkg = String(pkg || '').trim();
 
     if (!allowedPackage(pkg)) {
       console.warn('[CHECKOUT] invalid package', pkg);
@@ -175,7 +183,6 @@ async function createCheckoutSession(req, res) {
       cancel_url: cancelUrl,
       allow_promotion_codes: true,
       billing_address_collection: 'auto',
-      // currency NO se envía cuando usamos line_items con price
       metadata: {
         user_id: sub || '',
         phone_e164: user.phone_e164 || '',
@@ -206,7 +213,6 @@ router.post('/payments/create-checkout-session', requireAuth, createCheckoutSess
    WEBHOOK
 ============================= */
 async function stripeWebhookHandler(req, res) {
-  // req.rawBody fue colocado por index.js (express.raw)
   const sig = req.headers['stripe-signature'];
   let event;
 
@@ -324,7 +330,8 @@ router.get('/diag/payments', (_req, res) => {
         '50': hasPrice('STRIPE_PRICE_USD_50'),
         '100': hasPrice('STRIPE_PRICE_USD_100'),
         '250': hasPrice('STRIPE_PRICE_USD_250'),
-      }
+      },
+      DEFAULT_USED_IF_EMPTY: String(CHECKOUT_DEFAULT_PKG)
     }
   });
 });
