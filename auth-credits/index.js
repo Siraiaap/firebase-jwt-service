@@ -57,56 +57,39 @@ try {
    APP + middlewares
 ================================ */
 const app = express();
-
-// Seguridad básica
 app.use(helmet());
+app.use(cors({ origin: CORS_ORIGIN }));
 
-// --- CORS por lista (coma-separada) + wildcard ---
-// Ejemplo en Render: CORS_ORIGIN="https://siraia.com,https://www.siraia.com"
-const allowed = (CORS_ORIGIN || '*')
-  .split(',')
-  .map(s => s.trim())
-  .filter(Boolean);
-
-const allowOrigin = (origin) => {
-  if (!origin) return true; // requests server-side / curl
-  if (allowed.includes('*')) return true;
-  if (allowed.includes(origin)) return true;
-  // Permite subdominios *.siraia.com si declaras ".siraia.com"
-  if (allowed.some(o => o.startsWith('.') && origin.endsWith(o))) return true;
-  return false;
-};
-
-app.use(cors({
-  origin: (origin, cb) => cb(null, allowOrigin(origin)),
-  methods: ['GET','POST','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization','X-Request-ID','Stripe-Signature'],
-  maxAge: 86400
-}));
-
-/* ================================
-   IMPORTS de pagos
-================================ */
+// ⬇️ IMPORTAR pagos **DESPUÉS** de initializeApp (¡clave!)
 const { router: paymentsRouter, stripeWebhookHandler } = require('./payments');
 
 /* ================================
-   WEBHOOK STRIPE (RAW) — Debe ir ANTES del json()
+   WEBHOOKS STRIPE (RAW BODY)
+   — Registramos **dos** rutas para evitar 404 por confusiones:
+     /webhooks/stripe   y   /stripe/webhook
+   — DEBEN ir antes de express.json()
 ================================ */
-app.post('/stripe/webhook', express.raw({ type: 'application/json' }), (req, res) => {
-  req.rawBody = req.body; // buffer
-  return stripeWebhookHandler(req, res);
-});
+function rawStripe(req, res, next) {
+  return express.raw({ type: 'application/json' })(req, res, () => {
+    req.rawBody = req.body; // Buffer para verificar firma
+    next();
+  });
+}
 
-// JSON para el resto
-app.use(express.json({ limit: '10mb' }));
+app.post('/webhooks/stripe', rawStripe, (req, res) => stripeWebhookHandler(req, res));
+app.post('/stripe/webhook', rawStripe, (req, res) => stripeWebhookHandler(req, res));
 
 /* ================================
-   DIAGNÓSTICO
+   JSON middleware (después del webhook)
 ================================ */
+app.use(express.json({ limit: '10mb' }));
+
+// Sonda de diagnóstico (saber qué archivo corre)
 app.get('/__whoami', (_req, res) => {
   res.json({ from: __filename, marker: 'auth-credits-index', now: Date.now() });
 });
 
+// Health (con sello de versión)
 app.get('/health', (_req, res) => {
   res.json({
     ok: true,
@@ -117,6 +100,7 @@ app.get('/health', (_req, res) => {
   });
 });
 
+// Diagnóstico Firestore
 app.get('/diag/firestore', async (_req, res) => {
   const t0 = Date.now();
   try {
@@ -135,8 +119,17 @@ app.get('/diag/firestore', async (_req, res) => {
   }
 });
 
+// Rutas disponibles (ayuda para verificar webhooks)
+app.get('/diag/webhooks', (_req, res) => {
+  res.json({
+    ok: true,
+    stripe_webhook_paths: ['/webhooks/stripe', '/stripe/webhook'],
+    note: 'Ambas rutas aceptan el webhook de Stripe con body RAW.',
+  });
+});
+
 /* ================================
-   HELPERS (auth, normalizadores)
+   HELPERS
 ================================ */
 if (!JWT_SECRET) {
   console.warn('⚠️ JWT_SECRET no está definido. Firma/verificación de JWT fallará.');
@@ -175,11 +168,8 @@ function auth(req, res, next) {
 }
 
 /* ================================
-   API CORE (signup / me / debit / messages)
+   API
 ================================ */
-// ... (SIN CAMBIOS respecto a tu versión anterior; dejo todo igual)
-
-// (copia exacta de tus endpoints signup, me, credits/debit, messages)
 
 app.post('/signup', async (req, res) => {
   try {
@@ -390,9 +380,7 @@ app.get('/messages', auth, async (req, res) => {
 /* ================================
    PAGOS
 ================================ */
-const { router: paymentsRtr } = require('./payments');
-app.use(paymentsRtr);            // /checkout/session
-app.use('/payments', paymentsRtr); // alias /payments/checkout/session
+app.use('/payments', paymentsRouter);
 
 /* ================================
    START
