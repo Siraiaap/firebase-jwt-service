@@ -4,7 +4,11 @@
   "description": "JWT + credits backend for SiraIA (Render).",
   "main": "index.js",
   "scripts": {
-    "start": "node auth-credits/index.js"
+    "start": "node auth-credits/index.js",
+    "dev": "nodemon auth-credits/index.js"
+  },
+  "engines": {
+    "node": ">=18.17"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -15,5 +19,8 @@
     "jsonwebtoken": "^9.0.2",
     "libphonenumber-js": "^1.11.7",
     "stripe": "^14.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
   }
 }
