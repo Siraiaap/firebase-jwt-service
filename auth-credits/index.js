@@ -75,7 +75,6 @@ function rawStripe(req, res, next) {
     next();
   });
 }
-
 app.post('/webhooks/stripe', rawStripe, (req, res) => stripeWebhookHandler(req, res));
 app.post('/stripe/webhook', rawStripe, (req, res) => stripeWebhookHandler(req, res));
 
@@ -380,7 +379,9 @@ app.get('/messages', auth, async (req, res) => {
 /* ================================
    PAGOS
 ================================ */
-app.use('/payments', paymentsRouter);
+// 👉 Mantén ambas monturas para compatibilidad con el front actual:
+app.use('/payments', paymentsRouter); // /payments/checkout/session
+app.use('/', paymentsRouter);         // /checkout/session (alias)
 
 /* ================================
    START
