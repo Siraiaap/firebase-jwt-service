@@ -3,9 +3,8 @@
     {
       "site": "siraia",
       "public": "public",
-      "rewrites": [
-        { "source": "**", "destination": "/index.html" }
-      ]
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "rewrites": [{ "source": "**", "destination": "/index.html" }]
     },
     {
       "site": "siraia-redirects",
@@ -18,7 +17,7 @@
         },
         {
           "regex": "^(.*)$",
-          "destination": "https://siraia.com$1",
+          "destination": "https://siraia.com/$1",
           "type": 301
         }
       ]
