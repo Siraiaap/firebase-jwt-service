@@ -3,30 +3,25 @@
     {
       "site": "siraia",
       "public": "public",
-      "ignore": [
-        "firebase.json",
-        "**/.*",
-        "**/node_modules/**"
-      ],
       "rewrites": [
         { "source": "**", "destination": "/index.html" }
       ]
     },
     {
-  "site": "siraia-redirects",
-  "public": "redirects",
-  "redirects": [
-    {
-      "regex": "^/suggestions/v1/(.*)$",
-      "destination": "https://siraia.com/suggestions/v1/$1",
-      "type": 301
-    },
-    {
-      "regex": "^(.*)$",
-      "destination": "https://siraia.com$1",
-      "type": 301
+      "site": "siraia-redirects",
+      "public": "redirects",
+      "redirects": [
+        {
+          "regex": "^/suggestions/v1/(.*)$",
+          "destination": "https://siraia.com/suggestions/v1/$1",
+          "type": 301
+        },
+        {
+          "regex": "^(.*)$",
+          "destination": "https://siraia.com$1",
+          "type": 301
+        }
+      ]
     }
   ]
 }
-
-
