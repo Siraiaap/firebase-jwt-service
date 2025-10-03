@@ -1,122 +1,121 @@
-/* SiraIA — Referidos front (captura ?ref, anti-auto, propagación a checkout y registro)
-   - Captura ?ref al cargar y lo guarda en localStorage('sira_ref') con saneo básico.
-   - Expone window.SiraReferral { get,set,clear,isSelf,getJwtSub }.
-   - Inyecta referrer en POST /checkout/session (header X-Referral + body.referrer).
-   - No rompe nada de lo existente.
-*/
-(function () {
-  var KEY = 'sira_ref';
-  var MAXLEN = 80;
+/*! SiraIA referral helper — capture ?ref, anti-self, and inject to checkout session */
+/* global atob */
+(function(){
+  'use strict';
+  var LS_KEY = 'sira_ref';
+  var JWT_KEY = 'sira_jwt';
 
-  function sanitizeRef(v) {
-    if (!v || typeof v !== 'string') return null;
-    v = v.trim();
-    // permitir letras, números, guion, guion_bajo, punto y dos puntos
-    v = v.replace(/[^a-zA-Z0-9_\-:\.]/g, '');
-    if (!v) return null;
-    if (v.length > MAXLEN) v = v.slice(0, MAXLEN);
+  function safeLog(){ try { if (location.search.includes('refdebug=1')) console.log.apply(console, arguments); } catch(_){} }
+
+  function sanitizeRef(raw){
+    if (!raw || typeof raw !== 'string') return '';
+    var v = raw.trim();
+    // allow letters, numbers, _, -, :, ., @ (so we can carry UUID/phone masked/etc.)
+    v = v.replace(/[^A-Za-z0-9_\-:.@]/g, '');
+    if (v.length > 80) v = v.slice(0,80);
     return v;
   }
 
-  function getParam(name) {
-    try {
-      var sp = new URLSearchParams(window.location.search);
-      var val = sp.get(name);
-      return val;
-    } catch (e) { return null; }
+  function getRefFromURL(){
+    try{
+      var q = new URLSearchParams(location.search);
+      var ref = q.get('ref');
+      return sanitizeRef(ref||'');
+    }catch(e){ return ''; }
   }
 
-  function decodeJwtSubFromLocalStorage() {
-    var keys = ['sira_jwt', 'jwt', 'token', 'id_token']; // prueba múltiples por compatibilidad
-    for (var i = 0; i < keys.length; i++) {
-      var t = null;
-      try { t = localStorage.getItem(keys[i]); } catch (e) {}
-      if (!t) continue;
-      var parts = t.split('.');
-      if (parts.length < 2) continue;
-      try {
-        var payload = JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/')));
-        if (payload && payload.sub) return String(payload.sub);
-      } catch (e) {}
-    }
-    return null;
+  function storeRef(ref){
+    try{
+      if (ref) localStorage.setItem(LS_KEY, ref);
+    }catch(_){}
+  }
+  function getStoredRef(){
+    try{ return localStorage.getItem(LS_KEY) || ''; }catch(_){ return ''; }
+  }
+  function clearRef(){
+    try{ localStorage.removeItem(LS_KEY); }catch(_){}
   }
 
-  function getRef() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
-  function setRef(v) { var s = sanitizeRef(v); if (!s) return false; try { localStorage.setItem(KEY, s); return true; } catch (e) { return false; } }
-  function clearRef() { try { localStorage.removeItem(KEY); } catch (e) {} }
+  function decodeSubFromJWT(){
+    try{
+      var jwt = localStorage.getItem(JWT_KEY);
+      if (!jwt || jwt.indexOf('.') === -1) return '';
+      var parts = jwt.split('.');
+      var payload = JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/')));
+      return (payload && (payload.sub || payload.user_id || payload.uid)) || '';
+    }catch(_){ return ''; }
+  }
 
-  // Captura temprana de ?ref
-  var qref = getParam('ref');
-  if (qref) setRef(qref);
-
-  // API pública
-  var api = {
-    get: getRef,
-    set: setRef,
-    clear: clearRef,
-    getJwtSub: decodeJwtSubFromLocalStorage,
-    isSelf: function () {
-      var sub = decodeJwtSubFromLocalStorage();
-      var r = getRef();
-      return !!(sub && r && sub === r);
+  // Capture ?ref on load (first hit wins)
+  try{
+    var incoming = getRefFromURL();
+    if (incoming) {
+      storeRef(incoming);
+      safeLog('[referral] captured from URL =', incoming);
     }
-  };
-  try { window.SiraReferral = api; } catch (e) {}
+  }catch(_){}
 
-  // Parche de fetch para /checkout/session
-  var ofetch = window.fetch;
-  if (typeof ofetch === 'function') {
-    window.fetch = function(input, init) {
-      try {
-        var url = (typeof input === 'string') ? input : (input && input.url);
-        var method = (init && init.method) ? String(init.method).toUpperCase() : 'GET';
-        if (url && /\/checkout\/session(\?|$|\/)/.test(url) && method === 'POST') {
-          var ref = getRef();
-          var sub = decodeJwtSubFromLocalStorage();
-          if (ref && (!sub || ref !== sub)) {
-            // Headers
-            var headers = init && init.headers ? init.headers : {};
-            var H;
-            if (typeof Headers !== 'undefined') {
-              H = new Headers(headers);
-            } else {
-              H = headers;
-            }
-            // set X-Referral
-            if (H.set) H.set('X-Referral', ref);
-            else H['X-Referral'] = ref;
+  function isSelf(){
+    var ref = getStoredRef();
+    var sub = decodeSubFromJWT();
+    return ref && sub && (ref === sub);
+  }
 
-            // Body
-            var body = init && init.body;
-            var ct = (H.get && (H.get('Content-Type') || H.get('content-type'))) || (headers['Content-Type'] || headers['content-type']);
-            function ensureJsonCT() {
-              if (H.set) {
-                if (!H.get('Content-Type')) H.set('Content-Type', 'application/json');
-              } else {
-                if (!headers['Content-Type']) headers['Content-Type'] = 'application/json';
+  // Patch fetch to inject referral into /checkout/session calls
+  var _fetch = window.fetch;
+  window.fetch = function(input, init){
+    try{
+      var url = (typeof input === 'string') ? input : (input && input.url) || '';
+      var method = (init && init.method) || (input && input.method) || 'GET';
+      var isCheckout = url.indexOf('/checkout/session') !== -1;
+      var ref = getStoredRef();
+      var sub = decodeSubFromJWT();
+
+      if (isCheckout && ref && ref !== sub){
+        // Prepare headers
+        init = init || {};
+        var hdrs = new Headers(init.headers || (input && input.headers) || {});
+        hdrs.set('X-Referral', ref);
+
+        // If JSON body, append referrer field
+        if (method.toUpperCase() === 'POST' && init.body && !(init.body instanceof FormData)) {
+          var ct = hdrs.get('Content-Type') || '';
+          var bodyStr = init.body;
+          if (typeof bodyStr === 'string' && ct.indexOf('application/json') !== -1){
+            try{
+              var obj = JSON.parse(bodyStr);
+              if (obj && typeof obj === 'object' && !obj.referrer){
+                obj.referrer = ref;
+                init.body = JSON.stringify(obj);
               }
-            }
-            if (!body) {
-              ensureJsonCT();
-              body = JSON.stringify({ referrer: ref });
-            } else if (typeof body === 'string' && body.trim().charAt(0) === '{') {
-              try {
-                var obj = JSON.parse(body);
-                if (!obj.referrer) obj.referrer = ref;
-                body = JSON.stringify(obj);
-                ensureJsonCT();
-              } catch (e) { /* deja body como está */ }
-            } // si es FormData/URLSearchParams, lo dejamos (backend puede leer header)
-
-            // Reconstruye init con headers/body nuevos
-            init = init || {};
-            init.headers = H || headers;
-            init.body = body;
+            }catch(_){}
           }
         }
-      } catch (e) { /* no-op */ }
-      return ofetch.call(this, input, init);
-    };
-  }
+
+        init.headers = hdrs;
+        safeLog('[referral] injected into checkout', {url:url, ref:ref});
+      } else if (isCheckout && ref && sub && ref === sub){
+        // prevent self-referral leaking downstream
+        init = init || {};
+        var hdrs2 = new Headers(init.headers || (input && input.headers) || {});
+        hdrs2.delete('X-Referral');
+        init.headers = hdrs2;
+        // leave body untouched
+        safeLog('[referral] self-referral detected; not sending');
+      }
+    }catch(e){
+      // don't break the app if something goes wrong
+      safeLog('[referral] fetch patch error', e);
+    }
+    return _fetch.call(this, input, init);
+  };
+
+  // Expose small API
+  window.SiraReferral = {
+    get: getStoredRef,
+    set: function(v){ var s = sanitizeRef(v); if (s) storeRef(s); return s; },
+    clear: clearRef,
+    isSelf: isSelf,
+    sub: decodeSubFromJWT
+  };
 })();
