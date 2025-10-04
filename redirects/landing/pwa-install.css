@@ -1,0 +1,7 @@
+#pwaFab{position:fixed;right:14px;bottom:14px;z-index:60}
+#pwaFab[hidden]{display:none}
+.pwa-modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:grid;place-items:center;z-index:70}
+.pwa-modal[hidden]{display:none}
+.pwa-card{background:#fff;border-radius:16px;border:1px solid #E1E6E0;max-width:420px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
+.pwa-card h3{margin:0 0 6px}
+.pwa-steps{margin:8px 0 0 14px}
