@@ -11,6 +11,11 @@
       "public": "redirects",
       "redirects": [
         {
+          "source": "/",
+          "destination": "/landing/",
+          "type": 302
+        },
+        {
           "source": "/suggestions/v1/**",
           "destination": "https://siraia.com/suggestions/v1/**",
           "type": 301
