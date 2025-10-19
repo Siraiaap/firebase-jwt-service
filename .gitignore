@@ -83,3 +83,7 @@ redirects/landing/*.backup*.html
 public/index.backup*.html
 public/register.backup*.html
 redirects/landing/*.backup*.html
+.DS_Store
+**/.DS_Store
+public/*backup*.html
+redirects/landing/*backup*.html
