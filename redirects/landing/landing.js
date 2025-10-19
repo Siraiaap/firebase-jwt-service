@@ -1,4 +1,4 @@
-// landing.js (ES/EN, ejemplos, videos, referidos, CTA, PWA redirección)
+// landing.js (ES/EN, ejemplos, videos, referidos, CTA, PWA redirección) — v3 (consola limpia)
 const qs = (s, r=document)=>r.querySelector(s);
 const qsa = (s, r=document)=>Array.from(r.querySelectorAll(s));
 
@@ -8,29 +8,34 @@ let LANG = localStorage.getItem('landing_lang') || LANG_DEFAULT;
 
 async function loadI18n(lang){
   try{
-    const res = await fetch(`/landing/i18n/${lang}.json?v=2`);
+    const res = await fetch(`/landing/i18n/${lang}.json?v=3`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('i18n not found');
     return await res.json();
   }catch{ return {}; }
 }
 function applyI18n(dict){
   qsa('[data-i18n]').forEach(el=>{
     const key = el.getAttribute('data-i18n');
-    if (dict[key]) el.innerHTML = dict[key];
+    if (dict && dict[key]) el.innerHTML = dict[key];
   });
   document.documentElement.lang = LANG;
-  qs('#langES').setAttribute('aria-pressed', LANG==='es');
-  qs('#langEN').setAttribute('aria-pressed', LANG==='en');
+  const btnES = qs('#langES');
+  const btnEN = qs('#langEN');
+  if (btnES) btnES.setAttribute('aria-pressed', String(LANG==='es'));
+  if (btnEN) btnEN.setAttribute('aria-pressed', String(LANG==='en'));
 }
 async function setLang(lang){
   LANG = lang;
   localStorage.setItem('landing_lang', lang);
   const dict = await loadI18n(lang);
   applyI18n(dict);
-  renderExamples(); 
+  renderExamples();
   renderVideos();
 }
-qs('#langES').addEventListener('click', ()=>setLang('es'));
-qs('#langEN').addEventListener('click', ()=>setLang('en'));
+const btnES = qs('#langES');
+const btnEN = qs('#langEN');
+if (btnES) btnES.addEventListener('click', ()=>setLang('es'));
+if (btnEN) btnEN.addEventListener('click', ()=>setLang('en'));
 
 // -------- Referidos en CTA --------
 const url = new URL(location.href);
@@ -43,7 +48,7 @@ function withRef(href){
 }
 ['ctaHeader','ctaHero','ctaPricing1','ctaPricing2','ctaPricing3','ctaFinal'].forEach(id=>{
   const a = qs('#'+id);
-  if (a) a.href = withRef(a.href);
+  if (a && a.href) a.href = withRef(a.href);
 });
 
 // -------- Ejemplos (JSON remoto con fallback) --------
@@ -108,61 +113,60 @@ const FALLBACK_EXAMPLES = {
 async function fetchCat(cat){
   const lang = LANG === 'es' ? 'es' : 'en';
   try{
-    const res = await fetch(`${SUG_BASE}/${lang}/${cat}.json?v=1`, { mode: 'cors' });
+    const res = await fetch(`${SUG_BASE}/${lang}/${cat}.json?v=1`, { mode: 'cors', cache: 'no-store' });
     if (!res.ok) throw new Error('bad status');
     const data = await res.json();
     const items = Array.isArray(data.prompts) ? data.prompts : [];
     return items.slice(0, 6);
   }catch(e){
-    return FALLBACK_EXAMPLES[lang][cat] || [];
+    return (FALLBACK_EXAMPLES[lang] && FALLBACK_EXAMPLES[lang][cat]) ? FALLBACK_EXAMPLES[lang][cat] : [];
   }
 }
 
 let currentCat = 'salud';
 async function renderExamples(){
+  // activar chip
   qsa('.categories .chip').forEach(ch=>{
     ch.classList.toggle('active', ch.dataset.cat === currentCat);
   });
   const wrap = qs('#exampleList');
-wrap.innerHTML = '<div class="notice">...</div>';
+  if (!wrap) return;
+  wrap.innerHTML = '<div class="notice">...</div>';
 
-const items = await fetchCat(CAT_MAP[currentCat]);
-wrap.innerHTML = '';
+  const items = await fetchCat(CAT_MAP[currentCat]);
+  wrap.innerHTML = '';
 
-// Mostramos sólo 3 ejemplos y SIN botones
-items.slice(0, 3).forEach(text => {
-  const card = document.createElement('div');
-  card.className = 'example';
-
-  const p = document.createElement('p');
-  p.textContent = text;    // ← evita XSS y no usamos innerHTML
-
-  // Si NO quieres ninguna acción, deja esto así y NO añadas listeners.
-  // Si más adelante quieres que al tocar la tarjeta abra el chat con el ejemplo precargado:
-  // card.addEventListener('click', () => {
-  //   location.href = 'https://siraia.com/?q=' + encodeURIComponent(text);
-  // });
-
-  card.appendChild(p);
-  wrap.appendChild(card);
-});
+  // Mostrar sólo 3 ejemplos, SIN botones de copiar/usar
+  items.slice(0, 3).forEach(text => {
+    const card = document.createElement('div');
+    card.className = 'example';
+    const p = document.createElement('p');
+    p.textContent = text; // sin innerHTML para evitar XSS
+    card.appendChild(p);
     wrap.appendChild(card);
   });
 }
+
+// listeners de categorías
 qsa('.categories .chip').forEach(btn=>{
-  btn.addEventListener('click', ()=>{ currentCat = btn.dataset.cat; renderExamples(); });
+  btn.addEventListener('click', ()=>{
+    currentCat = btn.dataset.cat;
+    renderExamples();
+  });
 });
 
 // -------- Videos --------
 let videos = [];
 async function loadVideos(){
   try{
-    const res = await fetch('/landing/videos.json?v=2');
+    const res = await fetch('/landing/videos.json?v=3', { cache: 'no-store' });
+    if (!res.ok) throw new Error('no videos');
     videos = await res.json();
   }catch{ videos = []; }
 }
 function renderVideos(filter='all'){
   const grid = document.querySelector('#videoGrid');
+  if (!grid) return;
   grid.innerHTML = '';
   const list = videos.filter(v => filter==='all' || v.segment===filter);
   if (!list.length){
@@ -193,16 +197,17 @@ function renderVideos(filter='all'){
     grid.appendChild(card);
   });
 }
-document.querySelectorAll('.filters .chip').forEach(ch=>{
+qsa('.filters .chip').forEach(ch=>{
   ch.addEventListener('click', ()=>{
-    document.querySelectorAll('.filters .chip').forEach(x=>x.classList.remove('active'));
+    qsa('.filters .chip').forEach(x=>x.classList.remove('active'));
     ch.classList.add('active');
-    renderVideos(ch.dataset.filter);
+    renderVideos(ch.dataset.filter || 'all');
   });
 });
 
 // -------- Footer año --------
-document.querySelector('#y').textContent = new Date().getFullYear();
+const y = document.querySelector('#y');
+if (y) y.textContent = new Date().getFullYear();
 
 // -------- Init --------
 (async function init(){
