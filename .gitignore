@@ -67,3 +67,19 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+# macOS
+.DS_Store
+**/.DS_Store
+
+# backups locales
+public/index.backup*.html
+public/register.backup*.html
+redirects/landing/*.backup*.html
+# macOS
+.DS_Store
+**/.DS_Store
+
+# backups locales
+public/index.backup*.html
+public/register.backup*.html
+redirects/landing/*.backup*.html
