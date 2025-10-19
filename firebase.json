@@ -12,7 +12,8 @@
       "cleanUrls": true,
       "trailingSlash": false,
       "rewrites": [
-        { "source": "/", "destination": "/landing/index.html" }
+        { "source": "/",           "destination": "/landing/index.html" },
+        { "source": "/landing/**", "destination": "/landing/index.html" }
       ],
       "redirects": [
         { "source": "/register", "destination": "https://siraia.com/register.html", "type": 302 },
