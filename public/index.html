@@ -10,23 +10,22 @@
   <meta name="theme-color" content="#6F8576" />
   <style>
     :root{
-      --bg-app: #EDEAE0;        /* fondo principal */
-      --bg-chat: #F6F4EF;       /* panel chat */
-      --ink-main:#3A3D3B;       /* texto principal (corregido) */
-      --ink-muted:#596264;      /* texto secundario */
-      --brand:#6F8576;          /* acento */
-      --brand-strong:#556D60;   /* hover/active */
-      --bubble-bot:#FFFFFF;     /* burbuja sira */
-      --bubble-user:#DCE6E0;    /* burbuja usuario */
+      --bg-app: #EDEAE0;
+      --bg-chat: #F6F4EF;
+      --ink-main:#3A3D3B;
+      --ink-muted:#596264;
+      --brand:#6F8576;
+      --brand-strong:#556D60;
+      --bubble-bot:#FFFFFF;
+      --bubble-user:#DCE6E0;
       --border-soft:#E5E1D8;
-      --warn:#B24B4B;           /* errores sutiles */
+      --warn:#B24B4B;
       --shadow: 0 8px 24px rgba(0,0,0,.08);
       --radius:18px;
       --radius-lg:22px;
       --radius-sm:12px;
     }
 
-    /* Reset suave */
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
@@ -49,7 +48,7 @@
       display:flex;flex-direction:column;
       overflow:hidden;
       position:relative;
-      padding-bottom: env(safe-area-inset-bottom); /* Ocupa todo alto en móviles con safe-area */
+      padding-bottom: env(safe-area-inset-bottom);
     }
 
     header{
@@ -57,6 +56,8 @@
       padding:12px 14px;
       background:var(--bubble-bot);
       border-bottom:1px solid var(--border-soft);
+      position:relative;
+      z-index:2;
     }
     header .title{
       display:flex;align-items:center;gap:10px;
@@ -64,7 +65,24 @@
       color:var(--ink-main);
       font-size:20px;
     }
-    .buy-credits-header{
+    
+    .invite-header{
+      background: transparent; color: var(--ink-main);
+      border:1px solid #A8B6A8; padding:8px 12px; border-radius:999px;
+      font-weight:700; font-size:13px; margin-left:12px;
+    }
+    .invite-header:active{ transform: translateY(1px); }
+    .modal-invite{ position:fixed; inset:0; background:rgba(0,0,0,.4); display:none; align-items:center; justify-content:center; z-index:9999; }
+    .modal-invite[open]{ display:flex; }
+    .modal-card{ width:min(520px,92vw); background:#fff; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.2); border:1px solid #E0E6E0; }
+    .modal-card header{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid #EDEDED;}
+    .modal-card header h3{ margin:0; font-size:16px; font-weight:800; color:var(--ink-main);}
+    .modal-card .body{ padding:14px 16px; color:var(--ink-main); line-height:1.5; }
+    .modal-card .hint{ font-size:12px; color:#6B746B; margin-top:6px;}
+    .modal-card footer{ display:flex; gap:10px; justify-content:flex-end; padding:12px 16px; border-top:1px solid #EDEDED;}
+    .btn{ border-radius:999px; padding:10px 14px; font-weight:700; font-size:14px; border:1px solid #A8B6A8; background:#fff; color:var(--ink-main);}
+    .btn.primary{ background:var(--brand); border-color:var(--brand); color:#fff;}
+.buy-credits-header{
       margin-left:auto;
       background: var(--brand);
       color:#fff; border:none;
@@ -81,6 +99,48 @@
       border-radius:999px; border:1px solid #E0E8E1;
     }
 
+    /* ------- Menú de paquetes ------- */
+    .pkg-menu{
+      position:absolute;
+      top:56px; right:8px;
+      background:#fff;
+      border:1px solid var(--border-soft);
+      border-radius:16px;
+      box-shadow: var(--shadow);
+      width:min(92%, 380px);
+      padding:12px;
+      display:none;
+      z-index:50;
+    }
+    .pkg-menu.open{ display:block; }
+    .pkg-title{
+      font-weight:800; font-size:15px; color:var(--ink-main);
+      display:flex; justify-content:space-between; align-items:center;
+      margin-bottom:6px;
+    }
+    .pkg-sub{ font-size:12px; color:var(--ink-muted); margin:0 0 10px; }
+    .pkg-close{
+      background:transparent; border:none; font-weight:800; color:var(--ink-muted);
+      cursor:pointer; padding:4px 8px; border-radius:10px;
+    }
+    .pkg-close:hover{ background:#F3F6F3; }
+    .pkg-grid{
+      display:grid; grid-template-columns:repeat(2, 1fr); gap:8px;
+    }
+    .pkg-btn{
+      border:1px solid var(--border-soft);
+      background:#FFFFFF;
+      border-radius:14px;
+      padding:12px 10px;
+      display:flex; flex-direction:column; align-items:flex-start; gap:4px;
+      cursor:pointer;
+      box-shadow:0 1px 2px rgba(0,0,0,.04);
+    }
+    .pkg-btn strong{ font-size:18px; color:#111; letter-spacing:.2px; }
+    .pkg-btn span{ font-size:12px; color:var(--ink-muted); }
+    .pkg-btn:hover{ filter:brightness(.98); }
+    .pkg-help{ font-size:12px; color:var(--ink-muted); margin-top:10px; }
+
     #chat-history{
       flex:1 1 auto; overflow-y:auto;
       padding:18px;
@@ -96,20 +156,10 @@
       box-shadow: 0 1px 2px rgba(0,0,0,.04);
       word-wrap:break-word;
     }
-    .siraia-bubble{
-      align-self:flex-start;
-      background:var(--bubble-bot);
-      border-top-left-radius:8px;
-    }
-    .user-bubble{
-      align-self:flex-end;
-      background:var(--bubble-user);
-      border-top-right-radius:8px;
-    }
-    .thinking-dots{
-      display:flex;gap:6px;align-items:center;
-      height:18px;
-    }
+    .siraia-bubble{ align-self:flex-start; background:var(--bubble-bot); border-top-left-radius:8px; }
+    .user-bubble{ align-self:flex-end; background:var(--bubble-user); border-top-right-radius:8px; }
+
+    .thinking-dots{ display:flex;gap:6px;align-items:center; height:18px; }
     .thinking-dots span{
       width:8px;height:8px;border-radius:50%;
       background:#C8D3CC; display:inline-block;
@@ -119,7 +169,6 @@
     .thinking-dots span:nth-child(2){animation-delay:-.12s}
     @keyframes bounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
 
-    /* --- Nuevo: botón de reproducción SVG en color institucional --- */
     .play-btn{
       display:inline-flex;align-items:center;gap:8px;
       padding:8px 12px;border-radius:12px;background:#fff;
@@ -150,7 +199,6 @@
     .input-container{ display:none; gap:10px; align-items:flex-end; justify-content:center; }
     .input-container.active{ display:flex; }
 
-    /* Barra de entrada tipo WhatsApp/ChatGPT (pestañas clásicas) */
     .composer{
       display:flex;align-items:flex-end; gap:8px; width:100%;
       background:#fff; border:1px solid var(--border-soft);
@@ -159,7 +207,7 @@
     .composer textarea{
       flex:1 1 auto;
       border:none; outline:none; resize:none;
-      min-height:40px; max-height: 6.5em; /* ~6 líneas */
+      min-height:40px; max-height: 6.5em;
       font-size:15px; line-height:1.25;
       color:var(--ink-main); background:transparent;
     }
@@ -174,7 +222,6 @@
     .composer .send:active{ transform:scale(.98); background:var(--brand-strong); }
     .composer .send:disabled{ opacity:.5; cursor:not-allowed; }
 
-    /* Botón grabar – estilo consistente */
     #record-button{
       width:64px;height:64px;border:none;border-radius:50%;
       background:var(--brand); color:#fff; font-size:28px;
@@ -194,37 +241,15 @@
       100%{ box-shadow:0 0 0 0 rgba(111,133,118,0); transform:scale(1.00); }
     }
 
-    /* Vista previa de imagen seleccionada (mejorada) */
-    .preview{
-      display:flex;align-items:center;gap:10px; margin:6px 0 -2px;
-      color:var(--ink-muted); font-size:13px;
-      flex-wrap: wrap; /* permite 2 líneas si el nombre es largo */
-    }
-    .preview img{
-      max-width:84px; max-height:84px;
-      border-radius:10px; border:1px solid var(--border-soft);
-      object-fit:cover;
-    }
-    /* nombres largos abreviados y a dos líneas */
-    #u-name, #imgName{
-      flex:1 1 auto; min-width:0;
-      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
-      overflow:hidden; word-break:break-all;
-    }
-    /* Botón compartir / quitar sin romperse */
-    .share-row{
-      margin-top:6px; display:flex; gap:8px; flex-wrap:wrap;
-    }
-    .btn-share{
-      border:none; background:#EEF2EE; color:var(--brand);
-      font-weight:700; font-size:13px; padding:6px 10px;
-      border-radius:999px; cursor:pointer; white-space:nowrap;
-    }
+    .preview{ display:flex;align-items:center;gap:10px; margin:6px 0 -2px; color:var(--ink-muted); font-size:13px; flex-wrap: wrap; }
+    .preview img{ max-width:84px; max-height:84px; border-radius:10px; border:1px solid var(--border-soft); object-fit:cover; }
+    #u-name, #imgName{ flex:1 1 auto; min-width:0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; word-break:break-all; }
+    .share-row{ margin-top:6px; display:flex; gap:8px; flex-wrap:wrap; }
+    .btn-share{ border:none; background:#EEF2EE; color:var(--brand); font-weight:700; font-size:13px; padding:6px 10px; border-radius:999px; cursor:pointer; white-space:nowrap; }
 
     .muted{ color:var(--ink-muted); }
     .error{ color:var(--warn); font-weight:700; }
 
-    /* -------- Barra unificada (opcional) -------- */
     .unified{ padding:10px; border-top:1px solid var(--border-soft); display:none; }
     .u-composer{display:flex;align-items:flex-end;gap:8px;width:100%;
       background:#fff;border:1px solid var(--border-soft);border-radius:16px;padding:8px}
@@ -241,46 +266,98 @@
     .u-send[disabled]{opacity:.5;cursor:not-allowed}
     .u-send.mic.recording{background: linear-gradient(145deg, #6F8576 0%, #7D9788 100%);animation:pulse 1.2s infinite ease-in-out}
 
-    /* ===== NUEVO: Contador + VU meter ===== */
-    .rec-ui{
-      display:none; align-items:center; gap:.75rem; width:100%;
-      background:#fff; border:1px solid var(--border-soft);
-      border-radius:12px; padding:6px 8px; margin-top:6px;
-    }
+    .rec-ui{ display:none; align-items:center; gap:.75rem; width:100%; background:#fff; border:1px solid var(--border-soft);
+      border-radius:12px; padding:6px 8px; margin-top:6px; }
     .rec-ui.active{ display:flex; }
-    .rec-ui .timer{
-      min-width:48px; text-align:center; font-variant-numeric:tabular-nums;
-      font:600 14px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas;
-      color:#111827;
-    }
-    .rec-ui .vu-meter{
-      position:relative; display:flex; align-items:flex-end; gap:3px;
-      height:26px; flex:1; background:#F9FAF9; border-radius:10px; overflow:hidden;
-      border:1px solid #ECEFE8; padding:3px 4px;
-    }
-    .rec-ui .bar{
-      width: calc(100% / 28 - 3px); min-width:3px; height:5px;
-      border-radius:4px 4px 0 0; background:#c7d2fe; transform-origin:bottom;
-      transition:height .08s linear, background .08s linear;
-    }
-    .rec-ui .bar.hot { background:#93c5fd; }
-    .rec-ui .bar.over{ background:#fca5a5; }
-    /* variante compacta (barra unificada) */
-    .rec-ui.small .timer{ min-width:44px; font-size:13px; }
-    .rec-ui.small .vu-meter{ height:22px; }
+    .rec-ui .timer{ min-width:48px; text-align:center; font-variant-numeric:tabular-nums; font:600 14px ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas; color:#111827;}
+    .rec-ui .vu-meter{ position:relative; display:flex; align-items:flex-end; gap:3px; height:26px; flex:1; background:#F9FAF9; border-radius:10px; overflow:hidden; border:1px solid #ECEFE8; padding:3px 4px;}
+    .rec-ui .bar{ width: calc(100% / 28 - 3px); min-width:3px; height:5px; border-radius:4px 4px 0 0; background:#c7d2fe; transform-origin:bottom; transition:height .08s linear, background .08s linear; }
+    .rec-ui .bar.hot { background:#93c5fd; } .rec-ui .bar.over{ background:#fca5a5; }
+    .rec-ui.small .timer{ min-width:44px; font-size:13px; } .rec-ui.small .vu-meter{ height:22px; }
+  
+/* === Sugerencias Bottom-Sheet (ligero) + Tabs/Guide === */
+.sheet-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);backdrop-filter:saturate(120%) blur(1px);display:none;z-index:9998;}
+.sheet{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top-left-radius:16px;border-top-right-radius:16px;box-shadow:0 -8px 24px rgba(0,0,0,.18);transform:translateY(100%);transition:transform .22s ease-out;z-index:9999;max-height:75vh;display:flex;flex-direction:column;}
+.sheet.open{transform:translateY(0)}.sheet-backdrop.open{display:block}
+.sheet header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid rgba(0,0,0,.06)}
+.sheet header h3{margin:0;font-size:16px;font-weight:800;color:var(--ink-main)}
+.sheet header .close{border:none;background:transparent;font-size:20px;line-height:1}
+.sheet .body{padding:8px 16px;overflow:auto}
+.sheet .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sheet .cat{display:flex;align-items:center;gap:8px;border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:12px;background:#faf9f6;cursor:pointer}
+.sheet .cat:active{transform:scale(.98)}
+.sheet .cat .ico{font-size:20px}
+.sheet .list{display:flex;flex-direction:column;gap:8px}
+.sheet .item{border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:10px;background:#fff;cursor:pointer;text-align:left}
+.sheet .item:active{transform:scale(.99)}
+.sheet .footer{display:flex;gap:8px;padding:12px 16px;border-top:1px solid rgba(0,0,0,.06);align-items:center}
+.sheet .btn{border:1px solid rgba(0,0,0,.12);border-radius:999px;padding:10px 14px;background:#fff;font-weight:700}
+.sheet .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.sheet .muted{color:var(--ink-muted);font-size:12.5px}
+.sugg-tabs{display:flex;gap:8px;padding:8px 16px 0;}
+.sugg-tab{border:1px solid rgba(0,0,0,.12);border-radius:999px;padding:8px 12px;background:#fff;font-weight:700;cursor:pointer}
+.sugg-tab.active{background:var(--brand);border-color:var(--brand);color:#fff}
+.guide{border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:12px;background:#fff;margin:8px 16px;line-height:1.4}
+.guide h4{margin:0 0 6px 0;font-size:15px}
+.guide .tpl{display:block;border:1px dashed rgba(0,0,0,.2);border-radius:8px;padding:10px;margin-top:8px;background:#fafafa;white-space:pre-wrap}
+.guide .actions{display:flex;gap:8px;margin-top:10px}
+.guide .btn.small{padding:8px 10px;font-weight:700;border-radius:999px;border:1px solid rgba(0,0,0,.12)}
+.micro-list{display:flex;flex-direction:column;gap:8px;margin:8px 16px}
+.micro-item{border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:10px;background:#fff;cursor:pointer;text-align:left}
+@media (prefers-color-scheme: dark){
+  .sheet{background:#121212;border-color:#222}
+  .sheet .cat{background:#1a1a1a;border-color:#2a2a2a}
+  .sheet .item{background:#121212;border-color:#2a2a2a;color:#f1f1f1}
+  .sheet header{border-bottom-color:#2a2a2a}
+  .sheet .footer{border-top-color:#2a2a2a}
+  .sheet-backdrop{background:rgba(0,0,0,.5)}
+  .sugg-tab{background:#121212;border-color:#2a2a2a;color:#f1f1f1}
+  .sugg-tab.active{color:#fff}
+  .guide{background:#121212;border-color:#2a2a2a}
+  .guide .tpl{background:#161616;border-color:#333}
+  .micro-item{background:#121212;border-color:#2a2a2a}
+}
+
   </style>
 </head>
 <body>
   <div class="siraia-app">
     <header>
       <div class="title">SiraIA</div>
+      <button class="invite-header" id="inviteButton">Invitar</button>
       <button class="buy-credits-header" id="buyButton">Comprar consultas</button>
-      <div class="credits" id="creditPill" data-current="8" data-total="10">Créditos: 8/10</div>
+      <div class="credits" id="creditPill" data-current="" data-total="">Créditos: –/–</div>
     </header>
+
+    <!-- Menú de selección de paquetes -->
+    <div id="pkgMenu" class="pkg-menu" role="dialog" aria-modal="true" aria-labelledby="pkgTitle" aria-hidden="true">
+      <div class="pkg-title">
+        <span id="pkgTitle">Elige tu paquete</span>
+        <button id="pkgClose" class="pkg-close" type="button">✕</button>
+      </div>
+      <div class="pkg-grid" id="pkgGrid">
+        <button class="pkg-btn" type="button" data-pkg="25">
+          <strong>25</strong>
+          <span class="pkg-unit">consultas</span>
+        </button>
+        <button class="pkg-btn" type="button" data-pkg="50">
+          <strong>50</strong>
+          <span class="pkg-unit">consultas</span>
+        </button>
+        <button class="pkg-btn" type="button" data-pkg="100">
+          <strong>100</strong>
+          <span class="pkg-unit">consultas</span>
+        </button>
+        <button class="pkg-btn" type="button" data-pkg="250">
+          <strong>250</strong>
+          <span class="pkg-unit">consultas</span>
+        </button>
+      </div>
+    </div>
 
     <main id="chat-history" aria-live="polite"></main>
 
-    <!-- ===== Pestañas clásicas (se ocultarán si activas barra unificada) ===== -->
+    <!-- Pestañas clásicas -->
     <footer id="footer-tabs">
       <div class="input-area">
         <!-- Texto → Texto -->
@@ -308,12 +385,11 @@
           </div>
         </div>
 
-        <!-- Audio → Audio (activa por defecto) -->
+        <!-- Audio → Audio -->
         <div id="input-audio" class="input-container active" style="flex-direction:column;gap:8px">
           <div class="muted" style="font-size:13px">Pulsa para grabar tu pregunta</div>
           <button id="record-button" aria-label="Grabar">🎤</button>
 
-          <!-- NUEVO: UI de grabación (pestañas) -->
           <div id="rec-ui-tabs" class="rec-ui" aria-hidden="true">
             <span id="rec-timer-tabs" class="timer" aria-live="polite">00:00</span>
             <div id="rec-vu-tabs" class="vu-meter"></div>
@@ -328,13 +404,15 @@
       </div>
     </footer>
 
-    <!-- ===== Barra unificada (opcional) ===== -->
+    <!-- Barra unificada -->
     <footer id="footer-unified" class="unified">
-      <!-- Menú del botón + -->
       <div id="u-menu" class="u-menu">
         <button id="u-camera" type="button">Tomar foto</button>
         <button id="u-gallery" type="button">Elegir de galería</button>
-      </div>
+      
+        <button id="u-suggestions" type="button">Sugerencias</button></div>
+
+      <div id="sira-welcome-anchor" style="display:none"></div>
 
       <div class="u-composer">
         <div class="u-left">
@@ -344,17 +422,14 @@
         <button id="u-action" class="u-send mic" aria-label="Hablar">🎤</button>
       </div>
 
-      <!-- NUEVO: UI de grabación (barra unificada, en una fila aparte para no apretar el composer) -->
       <div id="rec-ui-unified" class="rec-ui small" aria-hidden="true">
         <span id="rec-timer-unified" class="timer" aria-live="polite">00:00</span>
         <div id="rec-vu-unified" class="vu-meter"></div>
       </div>
 
-      <!-- Inputs ocultos -->
       <input id="u-file-gallery" type="file" accept="image/*" hidden>
       <input id="u-file-camera"  type="file" accept="image/*" capture="environment" hidden>
 
-      <!-- Preview (compartida) -->
       <div id="u-preview" class="preview" style="display:none">
         <img id="u-thumb" alt="Vista previa"/>
         <span id="u-name" class="muted"></span>
@@ -362,16 +437,125 @@
       </div>
     </footer>
 
-    <!-- Audio oculto para reproducir respuestas -->
     <audio id="siraia-audio-player"></audio>
   </div>
 
   <script>
-    /* ====== Flags y endpoints ====== */
-    const UNIFIED_BAR = true; // ← Cambia a false si quieres seguir usando pestañas
-    const SHARE_AUDIO_ENDPOINT = 'https://siraia.com/api/share-audio'; // ← endpoint de enlace corto
+    /* ===== Flags y endpoints ===== */
+    const UNIFIED_BAR = true;
+    const SHARE_AUDIO_ENDPOINT = 'https://siraia.com/api/share-audio';
+    const AUTH_URL = 'https://siraia-auth-credits.onrender.com';
 
-    /* ====== Seguridad de logs ====== */
+    /* ===== i18n ===== */
+    (function initLang(){
+      try{
+        if (!((navigator.language||'es').toLowerCase().startsWith('es'))) {
+          document.documentElement.lang = 'en';
+        }
+      }catch{}
+    })();
+    const LANG_IS_ES = ((navigator.language||'es').toLowerCase().startsWith('es'));
+    const I18N = {
+      es: {
+        buy:"Comprar consultas",
+        buyProcessing:"Procesando…",
+        buyError:"No pude abrir la compra. Intenta de nuevo o contáctanos.",
+        buyLoginFirst:"Necesitas iniciar sesión para comprar créditos.",
+        creditsLabelShort:"Créditos:",
+        typeQuestionPh:"Escribe tu pregunta…",
+        imageLabel:"Adjunta una imagen (JPEG/PNG/WebP)",
+        imagePromptPh:"Escribe tu consulta sobre la imagen…",
+        audioTap:"Pulsa para grabar tu pregunta",
+        tabWrite:"📝 Escribir",
+        tabImage:"🖼 Imagen",
+        tabSpeak:"🎤 Hablar",
+        share:"Compartir",
+        audioListen:"Escuchar respuesta",
+        pause:"Pausar",
+        replay:"Escuchar de nuevo",
+        shareAudio:"Compartir audio",
+        shareAudioMsg:"Te comparto el audio de SiraIA (puede ser público para quien tenga el enlace).",
+        audioUrlBad:"La URL de audio llegó corrupta.",
+        browserNoRecord:"Tu navegador no permite grabar audio.",
+        micAccessError:"No se pudo acceder al micrófono. Revisa permisos del navegador/sistema.",
+        writeAQuestion:"Escribe una pregunta.",
+        formatNotSupported:"Formato no compatible. Usa JPEG, PNG o WebP.",
+        imageTooBig:"La imagen es muy grande (máx 10 MB).",
+        selectImageFirst:"Primero selecciona una imagen.",
+        invalidServerResponse:"Respuesta no válida del servidor.",
+        genericTryAgain:"Ocurrió un error. Intenta de nuevo.",
+        errorText:"Lo siento, ocurrió un error al procesar tu pregunta.",
+        errorImage:"Lo siento, ocurrió un error al procesar la imagen.",
+
+        pkgTitle: "Elige tu paquete",
+        pkgUnit: "consultas",
+      },
+      en: {
+        buy:"Buy credits",
+        buyProcessing:"Processing…",
+        buyError:"Couldn’t start checkout. Try again or contact us.",
+        buyLoginFirst:"You need to sign in to buy credits.",
+        creditsLabelShort:"Credits:",
+        typeQuestionPh:"Type your question…",
+        imageLabel:"Attach an image (JPEG/PNG/WebP)",
+        imagePromptPh:"Write your question about the image…",
+        audioTap:"Tap to record your question",
+        tabWrite:"📝 Write",
+        tabImage:"🖼 Image",
+        tabSpeak:"🎤 Speak",
+        share:"Share",
+        audioListen:"Listen",
+        pause:"Pause",
+        replay:"Listen again",
+        shareAudio:"Share audio",
+        shareAudioMsg:"I’m sharing SiraIA’s audio (public to anyone with the link).",
+        audioUrlBad:"Audio URL is invalid.",
+        browserNoRecord:"Your browser cannot record audio.",
+        micAccessError:"Couldn’t access the mic. Check browser/system permissions.",
+        writeAQuestion:"Please write a question.",
+        formatNotSupported:"Unsupported format. Use JPEG, PNG or WebP.",
+        imageTooBig:"Image is too large (max 10 MB).",
+        selectImageFirst:"Select an image first.",
+        invalidServerResponse:"Invalid server response.",
+        genericTryAgain:"An error occurred. Try again.",
+        errorText:"Sorry, there was an error processing your question.",
+        errorImage:"Sorry, there was an error processing the image.",
+
+        pkgTitle: "Choose a package",
+        pkgUnit: "credits",
+      }
+    };
+    function tr(key){ return (LANG_IS_ES ? I18N.es[key] : I18N.en[key]) || (I18N.es[key]||key); }
+    function applyI18nStatic(){
+      try{
+        const buyBtn = document.getElementById('buyButton');
+        if (buyBtn) buyBtn.textContent = tr('buy');
+        const tb = document.getElementById('tab-texto');
+        const ti = document.getElementById('tab-imagen');
+        const ta = document.getElementById('tab-audio');
+        if (tb) tb.textContent = tr('tabWrite');
+        if (ti) ti.textContent = tr('tabImage');
+        if (ta) ta.textContent = tr('tabSpeak');
+        const txt = document.getElementById('txt-prompt');
+        const ip  = document.getElementById('imgtxt-prompt');
+        if (txt) txt.placeholder = tr('typeQuestionPh');
+        if (ip)  ip.placeholder  = tr('imagePromptPh');
+        const lblImg = document.querySelector('label.muted[for="imgtxt-file-input"]');
+        if (lblImg) lblImg.textContent = tr('imageLabel');
+        const audioLead = document.querySelector('#input-audio .muted');
+        if (audioLead) audioLead.textContent = tr('audioTap');
+        const uText = document.getElementById('u-text');
+        if (uText) uText.placeholder = tr('typeQuestionPh');
+
+        // i18n del menú de paquetes
+        const isMX = guessMarket()==='MX';
+        const title = document.getElementById('pkgTitle');
+        if (title) title.textContent = tr('pkgTitle');
+        document.querySelectorAll('.pkg-unit').forEach(el => el.textContent = tr('pkgUnit'));
+      }catch{}
+    }
+
+    /* ===== Logs seguros ===== */
     const DEBUG = false;
     const log = (...args) => { if (DEBUG) console.log(...args); };
 
@@ -387,13 +571,13 @@
       }catch{ return '(invalid-url)' }
     }
 
-    /* ====== Elementos ====== */
+    /* ===== Elementos ===== */
     const chatHistory   = document.getElementById('chat-history');
     const recordButton  = document.getElementById('record-button');
     const audioPlayer   = document.getElementById('siraia-audio-player');
 
     const tabButtons    = document.querySelectorAll('.action-buttons button');
-    const inputBlocks   = document.querySelectorAll('.input-container');
+    inputBlocks   = document.querySelectorAll('.input-container');
 
     const txtArea       = document.getElementById('txt-prompt');
     const txtSend       = document.getElementById('txt-send-button');
@@ -408,7 +592,7 @@
 
     const buyButton     = document.getElementById('buyButton');
 
-    /* ====== Unificada ====== */
+    /* ===== Unificada ===== */
     const footerTabs    = document.getElementById('footer-tabs');
     const footerUnified = document.getElementById('footer-unified');
 
@@ -427,45 +611,289 @@
     const uName    = document.getElementById('u-name');
     const uClear   = document.getElementById('u-clear');
 
-    /* ====== Endpoints (producción) ====== */
+    /* ===== Endpoints (prod) ===== */
     const WH_AUDIO  = 'https://siraiaap.app.n8n.cloud/webhook/entrada-audio';
     const WH_TEXT   = 'https://siraiaap.app.n8n.cloud/webhook/siraia-pregunta';
     const WH_IMAGE  = 'https://siraiaap.app.n8n.cloud/webhook/siraia-imagen';
+    (async function hydrateCreditsOnLoad(){
+      try{
+        const jwt = localStorage.getItem('sira_jwt');
+        if (!jwt) return;
+        const r = await fetch('https://siraia-auth-credits.onrender.com/me', {
+          headers: { Authorization: 'Bearer ' + jwt }
+        });
+        if (!r.ok) return;
+        const data = await r.json();
+        const rem = data?.user?.credits_remaining ?? data?.credits_remaining;
+        const tot = data?.user?.credits_total ?? data?.credits_total ?? undefined;
+        if (Number.isFinite(rem)) updateCreditPill(rem, tot);
+      }catch{}
+    })();
 
-    // === UI: actualizar pastilla de créditos ===
     function updateCreditPill(remaining, total) {
       const pill = document.getElementById('creditPill');
       if (!pill) return;
+      const lead = tr('creditsLabelShort') + ' ';
       if (typeof total === 'number' && total > 0) {
         pill.dataset.current = String(remaining);
         pill.dataset.total = String(total);
-        pill.textContent = `Créditos: ${remaining}/${total}`;
+        pill.textContent = `${lead}${remaining}/${total}`;
       } else {
-        // si no se envía total, mantenemos el que ya trae el DOM
         const currentTotal = Number(pill.dataset.total || 10);
         pill.dataset.current = String(remaining);
-        pill.textContent = `Créditos: ${remaining}/${currentTotal}`;
+        pill.textContent = `${lead}${remaining}/${currentTotal}`;
       }
     }
-    // ===== Auth headers (JWT + Request-Id) =====
+
+    function getDisplayNameSafe() {
+      try {
+        const raw = (localStorage.getItem('sira_display_name') || '').trim();
+        if (!raw) return '';
+        return raw.replace(/[\r\n\t]/g, ' ').slice(0, 40);
+      } catch { return ''; }
+    }
+
     function getAuthHeaders() {
       const SIRA_JWT = localStorage.getItem('sira_jwt') || '';
       const REQUEST_ID = (crypto.randomUUID?.() || (Math.random().toString(36).slice(2) + Date.now()));
-      return {
+      const headers = {
         ...(SIRA_JWT ? { 'Authorization': `Bearer ${SIRA_JWT}` } : {}),
         'X-Request-ID': REQUEST_ID,
       };
+      const dn = getDisplayNameSafe();
+      if (dn) headers['X-Display-Name'] = dn;
+      return headers;
+    }
+    function getAuthHeadersWithRid(rid){
+      const base = getAuthHeaders();
+      if (rid) base['X-Request-ID'] = rid;
+      return base;
     }
 
-    /* ====== State compartido ====== */
+    /* ===== Mini-DB de adjuntos (UI) ===== */
+    const ATTACH_KEY = 'sira_ui_attachments_v1';
+    const canonKey = (str)=> String(str||'').replace(/\s+/g,' ').trim().slice(0,300).toLowerCase();
+    function _loadAttachDB(){ try { return JSON.parse(localStorage.getItem(ATTACH_KEY) || '{}'); } catch { return {}; } }
+    function _saveAttachDB(db){ try { localStorage.setItem(ATTACH_KEY, JSON.stringify(db)); } catch {} }
+    function putAttachment(kind, contentText, data){
+      const db = _loadAttachDB();
+      const key = kind + '|' + canonKey(contentText);
+      db[key] = { ...data, ts: Date.now(), canon: canonKey(contentText) };
+      const entries = Object.entries(db).sort((a,b)=> a[1].ts - b[1].ts);
+      const MAX = 200;
+      if (entries.length > MAX){
+        for (let i=0; i<entries.length-MAX; i++) delete db[entries[i][0]];
+      }
+      _saveAttachDB(db);
+    }
+    function getAttachment(kind, contentText){
+      const db = _loadAttachDB();
+      const key = kind + '|' + canonKey(contentText);
+      return db[key] || null;
+    }
+    function getAttachmentFuzzy(kind, contentText){
+      const db = _loadAttachDB();
+      const canon = canonKey(contentText);
+      let best=null, bestScore=0;
+      for (const [k, v] of Object.entries(db)){
+        if (!k.startsWith(kind + '|')) continue;
+        const other = v.canon || k.split('|')[1] || '';
+        const shortA = canon.slice(0,80), shortB = other.slice(0,80);
+        let score = 0;
+        if (other.includes(shortA) || canon.includes(shortB)) score = 0.85;
+        const A = new Set(canon.split(/\s+/).filter(Boolean));
+        const B = new Set(other.split(/\s+/).filter(Boolean));
+        let inter=0; for (const t of A) if (B.has(t)) inter++;
+        const uni = A.size + B.size - inter;
+        const j = uni ? inter/uni : 0;
+        score = Math.max(score, j);
+        if (score > bestScore){ bestScore = score; best = v; }
+      }
+      return bestScore >= 0.6 ? best : null;
+    }
+    function getAttachmentAny(kind, contentText){
+      return getAttachment(kind, contentText) || getAttachmentFuzzy(kind, contentText);
+    }
+
+    async function persistMessage(role, content, requestId){
+      try{
+        const jwt = localStorage.getItem('sira_jwt');
+        if (!jwt) return;
+        await fetch(`${AUTH_URL}/messages`, {
+          method:'POST',
+          headers: { 'Content-Type':'application/json', ...getAuthHeaders() },
+          body: JSON.stringify({ role, content, request_id: requestId || undefined })
+        }).catch(()=>{});
+      }catch{}
+    }
+
+    /* ===== Utilidades de orden ===== */
+    function extractTs(raw){
+      const tryParse = v=>{
+        if (v == null) return NaN;
+        if (typeof v === 'number') return isFinite(v) ? (v > 1e12 ? v : v*1000) : NaN;
+        if (typeof v === 'string'){
+          const t = Date.parse(v);
+          return isNaN(t) ? NaN : t;
+        }
+        if (typeof v === 'object'){
+          if (typeof v.seconds === 'number'){
+            const ms = v.seconds*1000 + (v.nanoseconds||v.nanos||0)/1e6;
+            return ms;
+          }
+          if (v._seconds) return v._seconds*1000 + (v._nanoseconds||0)/1e6;
+        }
+        return NaN;
+      };
+      const cands = [raw?.ts, raw?.timestamp, raw?.time, raw?.created_at, raw?.createdAt, raw?._ts, raw?._createdAt, raw?.date];
+      for (const c of cands){
+        const t = tryParse(c);
+        if (!isNaN(t)) return t;
+      }
+      return NaN;
+    }
+    function normalizeOrder(items){
+      const withTs = items.map(m => extractTs(m));
+      const haveTs = withTs.filter(t => !isNaN(t)).length;
+      if (haveTs >= Math.floor(items.length*0.6)){
+        return [...items].sort((a,b)=> extractTs(a) - extractTs(b));
+      }
+      let aThenU=0,uThenA=0;
+      for (let i=0;i<items.length-1;i++){
+        const r1=items[i]?.role, r2=items[i+1]?.role;
+        if (r1==='assistant' && r2==='user') aThenU++;
+        if (r1==='user' && r2==='assistant') uThenA++;
+      }
+      if (aThenU > uThenA) return items.slice().reverse();
+      return items;
+    }
+    function hasAudioAttachmentFor(text){
+      return !!getAttachmentAny('audio', String(text||''));
+    }
+    function reorderAudioPairs(items){
+      const out=[];
+      for (let i=0;i<items.length;i++){
+        const cur = items[i], nxt = items[i+1];
+        if (cur?.role==='assistant' && nxt?.role==='user' && hasAudioAttachmentFor(cur.content)){
+          const rid1 = cur.request_id || cur.requestId || cur.rid;
+          const rid2 = nxt.request_id || nxt.requestId || nxt.rid;
+          const sameRid = !!rid1 && !!rid2 && rid1 === rid2;
+          const t1 = extractTs(cur), t2 = extractTs(nxt);
+          const close = (isFinite(t1) && isFinite(t2)) ? (t2 - t1 <= 10*60*1000) : true;
+          const userHasImage = !!getAttachmentAny('image', String(nxt.content||''));
+          if ((sameRid && close) || (!rid1 && !rid2 && close && !userHasImage)) {
+            out.push(nxt, cur); i++; continue;
+          }
+        }
+        out.push(cur);
+      }
+      return out;
+    }
+    function reorderByRequestId(items){
+      const groups = new Map();
+      let anyRid = false;
+      for (const m of items){
+        const rid = m?.request_id || m?.requestId || m?.rid;
+        if (!rid) continue;
+        anyRid = true;
+        if (!groups.has(rid)) groups.set(rid, []);
+        groups.get(rid).push(m);
+      }
+      if (!anyRid) return items;
+
+      const enriched = [];
+      for (const [rid, arr] of groups){
+        const users = arr.filter(x=>x.role==='user').sort((a,b)=>extractTs(a)-extractTs(b));
+        const assts = arr.filter(x=>x.role==='assistant').sort((a,b)=>extractTs(a)-extractTs(b));
+        const group = [...users, ...assts];
+        const tmin = Math.min(...group.map(extractTs).map(v=>isNaN(v)?Infinity:v));
+        enriched.push({ rid, items: group, tmin: isFinite(tmin)? tmin : Date.now() });
+      }
+      enriched.sort((a,b)=> a.tmin - b.tmin);
+
+      const ridsSeen = new Set(Array.from(groups.keys()));
+      const withRidFlatten = enriched.flatMap(g=>g.items);
+      const withoutRid = items.filter(m=>{
+        const rid = m?.request_id || m?.requestId || m?.rid;
+        return !rid || !ridsSeen.has(rid);
+      });
+      return [...withRidFlatten, ...withoutRid];
+    }
+
+    function addAssistantTextBubble(text){
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble siraia-bubble';
+      chatHistory.appendChild(bubble);
+      renderBotText(bubble, text);
+      scrollToBottom();
+      return bubble;
+    }
+    function ensureUserShare(contentEl, textToShare){
+      if (!contentEl || !contentEl.parentElement) return;
+      const parent = contentEl.parentElement;
+      const hasRow = parent.querySelector('.share-row');
+      if (!hasRow) appendShareButtonUnder(contentEl, textToShare);
+    }
+
+    async function loadHistoryAtStartup(){
+      try {
+        const jwt = localStorage.getItem('sira_jwt');
+        if (!jwt) return;
+
+        const r = await fetch(`${AUTH_URL}/messages?limit=100`, {
+          headers: { 'Authorization': 'Bearer ' + jwt }
+        });
+        const data = await r.json().catch(()=> ({}));
+        let items = Array.isArray(data.items) ? data.items : [];
+        if (!items.length) return;
+
+        items = normalizeOrder(items);
+        items = reorderAudioPairs(items);
+        items = reorderByRequestId(items);
+
+        try {
+          localStorage.setItem('sira_welcome_v4_done', '1');
+          const card = document.getElementById('welcomeCard'); if (card) card.remove();
+          const anchor = document.getElementById('sira-welcome-anchor'); if (anchor) anchor.style.display = 'none';
+        } catch {}
+
+        window.__sira_loading_history = true;
+
+        items.forEach(m => {
+          const contentText = String(m.content || '');
+          if (m.role === 'user') {
+            const contentEl = addUserBubble(contentText, 'text');
+            ensureUserShare(contentEl, contentText);
+            const imgAtt = getAttachmentAny('image', contentText);
+            if (imgAtt?.dataUrl) {
+              const wrap = document.createElement('div');
+              wrap.className='preview'; wrap.style.marginTop='6px';
+              const img = document.createElement('img');
+              img.src = imgAtt.dataUrl; img.alt='Imagen enviada';
+              wrap.appendChild(img);
+              contentEl.parentElement.appendChild(wrap);
+            }
+          } else {
+            const bubble = addAssistantTextBubble(contentText);
+            const audAtt = getAttachmentAny('audio', contentText);
+            if (audAtt?.url) renderAudioControls(bubble, audAtt.url);
+          }
+        });
+
+      } catch (e) {
+        console.warn('Historial no disponible:', e);
+      } finally {
+        window.__sira_loading_history = false;
+      }
+    }
+
+    /* ===== Estado grabación ===== */
     let selectedImageFile = null, selectedObjectURL=null;
     let isRecording = false, mediaRecorder, audioChunks=[], durationTimeout;
 
-    // NUEVO: estado para VU+timer
     let audioCtx=null, analyser=null, sourceNode=null, dataArray=null, rafId=null, startTs=0, lastTick=0;
     const BAR_COUNT = 28, FFT_SIZE = 256, REFRESH_MS = 60;
 
-    // Elementos UI de grabación (pestañas y unificada)
     const recUITabs     = document.getElementById('rec-ui-tabs');
     const recTimerTabs  = document.getElementById('rec-timer-tabs');
     const recVUTabs     = document.getElementById('rec-vu-tabs');
@@ -499,20 +927,15 @@
       let sum=0, c=0; for(let i=s;i<e;i++){ sum+=arr[i]; c++; }
       return c? sum/c : 0;
     }
-    function showRecUI(active){ // 'tabs' | 'unified'
+    function showRecUI(active){
       const inTabs = active==='tabs';
-      // activar uno, ocultar el otro
       if (recUITabs)   { recUITabs.classList.toggle('active', inTabs);   recUITabs.setAttribute('aria-hidden', String(!inTabs)); }
       if (recUIUnified){ recUIUnified.classList.toggle('active', !inTabs); recUIUnified.setAttribute('aria-hidden', String(inTabs)); }
-
-      // asegurar barras creadas
       if (inTabs){
         if (recVUTabs && !barsTabs) ensureBars(recVUTabs, 'tabs');
       } else {
         if (recVUUnif && !barsUnif) ensureBars(recVUUnif, 'unified');
       }
-
-      // resetear timer visible
       if (inTabs && recTimerTabs) recTimerTabs.textContent = '00:00';
       if (!inTabs && recTimerUnif) recTimerUnif.textContent = '00:00';
     }
@@ -530,11 +953,9 @@
       if (now - lastTick < REFRESH_MS) return;
       lastTick = now;
 
-      // timer
       const timerEl = UNIFIED_BAR ? recTimerUnif : recTimerTabs;
       if (timerEl) timerEl.textContent = fmtTime(now - startTs);
 
-      // VU
       if (analyser && dataArray){
         analyser.getByteFrequencyData(dataArray);
         const binPerBar = Math.floor(dataArray.length / BAR_COUNT);
@@ -560,15 +981,13 @@
         if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) break;
         if (t && MediaRecorder.isTypeSupported(t)) return t;
       }
-      // fallback vacío deja que el navegador decida
       return '';
     }
 
-    /* ====== Utilidades ====== */
     function scrollToBottom(){ chatHistory.scrollTop = chatHistory.scrollHeight; }
     function autogrow(el){
       el.style.height = 'auto';
-      const max = parseFloat(getComputedStyle(el).lineHeight) * 6; // ~6 líneas
+      const max = parseFloat(getComputedStyle(el).lineHeight) * 6;
       el.style.height = Math.min(el.scrollHeight, max) + 'px';
     }
     function sanitizeUrl(raw){
@@ -586,6 +1005,15 @@
       const head = base.slice(0, Math.ceil((max-1)/2));
       const tail = base.slice(-Math.floor((max-1)/2));
       return `${head}…${tail}${ext}`;
+    }
+
+    function pickMessageField(payload){
+      if (!payload || typeof payload !== 'object') return '';
+      const candidates = [ payload.content, payload.text, payload.answer_text, payload.Texto ];
+      for (const c of candidates){
+        if (typeof c === 'string' && c.trim()) return c;
+      }
+      return '';
     }
 
     async function shareText(text){
@@ -613,12 +1041,11 @@
         });
         if (!res.ok) throw new Error('share endpoint failed');
         const data = await res.json();
-        return data?.shortUrl || rawAudioUrl; // fallback
-      }catch{ return rawAudioUrl; } // fallback a URL directa
+        return data?.shortUrl || rawAudioUrl;
+      }catch{ return rawAudioUrl; }
     }
 
-    /* ====== Burbujas ====== */
-    function addUserBubble(text, type='text'){
+    function addUserBubble(text, type='text', requestId){
       const bubble = document.createElement('div');
       bubble.className = 'bubble user-bubble';
       const content = document.createElement('div');
@@ -630,6 +1057,13 @@
       bubble.appendChild(content);
       chatHistory.appendChild(bubble);
       scrollToBottom();
+
+      try {
+        if (!window.__sira_loading_history && type !== 'transcription' && String(text||'').trim()) {
+          persistMessage('user', text, requestId);
+        }
+      } catch {}
+
       return content;
     }
 
@@ -647,7 +1081,7 @@
       row.className = 'share-row';
       const btn = document.createElement('button');
       btn.className = 'btn-share';
-      btn.textContent = 'Compartir';
+      btn.textContent = tr('share');
       btn.onclick = () => shareText(String(textToShare||''));
       row.appendChild(btn);
       el.parentElement.appendChild(row);
@@ -659,79 +1093,95 @@
       p.textContent = String(text||'');
       bubble.appendChild(p);
 
-      // botón compartir de la respuesta
       const row = document.createElement('div');
       row.className = 'share-row';
       const btn = document.createElement('button');
       btn.className = 'btn-share';
-      btn.textContent = 'Compartir';
+      btn.textContent = tr('share');
       btn.onclick = () => shareText(String(text||''));
       row.appendChild(btn);
       bubble.appendChild(row);
     }
 
-    async function renderAudioControls(bubble, rawAudioUrl){
-      const cleanAudioUrl = sanitizeUrl(rawAudioUrl);
-      try{ new URL(cleanAudioUrl); }catch{
-        const warn = document.createElement('div');
-        warn.className='error'; warn.textContent='La URL de audio llegó corrupta.';
-        bubble.appendChild(warn); return;
-      }
-
-      // ▶️ Reproductor
-      const play = document.createElement('button');
-      play.className='play-btn';
-      play.innerHTML = `
+    let currentAudioButton = null;
+    function setBtnToPlay(btn){
+      btn.innerHTML = `
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M8 5v14l11-7z"></path>
         </svg>
-        <span>Escuchar respuesta</span>
+        <span>${tr('audioListen')}</span>
       `;
+      btn.disabled = false;
+    }
+    function setBtnToPause(btn){
+      btn.innerHTML = `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 5h4v14H6zM14 5h4v14h-4z"></path>
+        </svg>
+        <span>${tr('pause')}</span>
+      `;
+      btn.disabled = false;
+    }
+    function setBtnToReplay(btn){
+      btn.innerHTML = `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M8 5v14l11-7z"></path>
+        </svg>
+        <span>${tr('replay')}</span>
+      `;
+      btn.disabled = false;
+    }
 
-      audioPlayer.preload='auto';
-      audioPlayer.src = cleanAudioUrl;
+    function renderAudioControls(bubble, rawAudioUrl){
+      const cleanAudioUrl = sanitizeUrl(rawAudioUrl);
+      try{ new URL(cleanAudioUrl); }catch{
+        const warn = document.createElement('div');
+        warn.className='error'; warn.textContent = tr('audioUrlBad');
+        bubble.appendChild(warn); return;
+      }
+
+      const play = document.createElement('button');
+      play.className='play-btn';
+      setBtnToPlay(play);
+      play.dataset.url = cleanAudioUrl;
 
       play.onclick = async ()=>{
         try{
+          if (currentAudioButton === play){
+            if (audioPlayer.paused) { await audioPlayer.play(); setBtnToPause(play); }
+            else { audioPlayer.pause(); setBtnToPlay(play); }
+            return;
+          }
+          if (currentAudioButton && currentAudioButton !== play){
+            setBtnToPlay(currentAudioButton);
+          }
+          currentAudioButton = play;
+          audioPlayer.preload = 'auto';
+          if (audioPlayer.src !== cleanAudioUrl){
+            audioPlayer.src = cleanAudioUrl;
+          }
           await audioPlayer.play();
-          play.innerHTML = `
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M3 10h3v4H3zm5 0h3v4H8zm5 0h3v4h-3zm5 0h3v4h-3z"></path>
-            </svg>
-            <span>Reproduciendo…</span>
-          `;
-          play.disabled = true;
+          setBtnToPause(play);
         }catch{
-          play.textContent='❌ Error al reproducir';
+          play.textContent='❌';
           play.disabled = false;
         }
       };
-      audioPlayer.onended = ()=>{
-        play.innerHTML = `
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M8 5v14l11-7z"></path>
-          </svg>
-          <span>Escuchar de nuevo</span>
-        `;
-        play.disabled=false;
-      };
-      audioPlayer.onerror = ()=>{
-        play.textContent='❌ Error al cargar audio';
-        play.disabled=false;
-      };
+
+      audioPlayer.onpause = ()=> { if (currentAudioButton) setBtnToPlay(currentAudioButton); };
+      audioPlayer.onended = ()=> { if (currentAudioButton) setBtnToReplay(currentAudioButton); };
+      audioPlayer.onerror = ()=> { if (currentAudioButton) { currentAudioButton.textContent='❌'; currentAudioButton.disabled=false; } };
 
       bubble.appendChild(play);
 
-      // Compartir audio
       const row = document.createElement('div');
       row.className = 'share-row';
 
       const btnShareAudio = document.createElement('button');
       btnShareAudio.className = 'btn-share';
-      btnShareAudio.textContent = 'Compartir audio';
+      btnShareAudio.textContent = tr('shareAudio');
       btnShareAudio.onclick = async () => {
-        const buildMsg = (url) =>
-          `Te comparto el audio de SiraIA (puede ser público para quien tenga el enlace).\n\n${url}`;
+        const buildMsg = (url) => `${tr('shareAudioMsg')}\n\n${url}`;
 
         try {
           const shortUrl = await getShortAudioLink(cleanAudioUrl);
@@ -754,50 +1204,52 @@
       row.appendChild(btnShareAudio);
       bubble.appendChild(row);
     }
-
     function updateSiraiaBubble(bubble, responseData){
-      // Texto opcional
-      if (responseData && typeof responseData.text === 'string' && responseData.text.trim()){
-        renderBotText(bubble, responseData.text);
+      const payload = Array.isArray(responseData)? responseData[0] : (responseData || {});
+      const message = pickMessageField(payload);
+
+      if (message){
+        renderBotText(bubble, message);
+        try { if(!window.__sira_loading_history) persistMessage('assistant', message, payload?.request_id ?? bubble?.dataset?.rid); } catch {}
       }else{
         bubble.innerHTML='';
       }
 
-      // Audio opcional
-      const payload = Array.isArray(responseData)? responseData[0] : responseData || {};
       const rawAudioUrl = payload.audioUrl ?? payload.respuestaFinal ?? '';
       if (rawAudioUrl){
         renderAudioControls(bubble, rawAudioUrl);
+        try { putAttachment('audio', message, { url: rawAudioUrl }); } catch {}
+      }
+
+      if (typeof payload?.credits_remaining === 'number') {
+        updateCreditPill(payload.credits_remaining, payload.credits_total);
       }
 
       scrollToBottom();
     }
 
-    /* ====== Tabs ====== */
     tabButtons.forEach(btn=>{
       btn.addEventListener('click', ()=>{
         const id = btn.dataset.input;
         tabButtons.forEach(b=>b.classList.toggle('active', b===btn));
         inputBlocks.forEach(c=>c.classList.toggle('active', c.id===id));
+        applyI18nStatic();
       });
     });
 
-    /* ====== Textarea autogrow ====== */
     [txtArea, imgTxtArea, uText].forEach(el=>{
       if(!el) return;
       el.addEventListener('input', ()=>autogrow(el));
       autogrow(el);
     });
 
-    /* ====== Audio → Audio ====== */
     async function startRecording(){
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-        alert('Tu navegador no permite grabar audio.'); return;
+        alert(tr('browserNoRecord')); return;
       }
       try{
         const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
 
-        // MIME compatible por navegador
         const mime = pickMimeType();
         const options = mime ? { mimeType: mime } : undefined;
 
@@ -815,18 +1267,15 @@
           }
         };
 
-        // —— Web Audio para VU ——
         audioCtx   = new (window.AudioContext || window.webkitAudioContext)();
         sourceNode = audioCtx.createMediaStreamSource(stream);
         analyser   = audioCtx.createAnalyser();
-        analyser.fftSize = FFT_SIZE;
+        analyser.fftSize = 256;
         dataArray  = new Uint8Array(analyser.frequencyBinCount);
         sourceNode.connect(analyser);
 
-        // UI activa (tabs o unificada)
         showRecUI(UNIFIED_BAR ? 'unified' : 'tabs');
 
-        // Estado y animación
         isRecording = true;
         (UNIFIED_BAR ? uAction : recordButton).classList.add('recording');
         if (UNIFIED_BAR) {
@@ -836,13 +1285,12 @@
         startTs = performance.now(); lastTick = 0;
         drawLoop();
 
-        // Arrancar grabación + límite 60s
         mediaRecorder.start();
         clearTimeout(durationTimeout);
         durationTimeout = setTimeout(()=>{ if(isRecording) stopRecording(); }, 60000);
       }catch(err){
         console.error('No se pudo iniciar la grabación', err);
-        alert('No se pudo acceder al micrófono. Revisa permisos del navegador/sistema.');
+        alert(tr('micAccessError'));
         cleanupRecording();
       }
     }
@@ -868,7 +1316,6 @@
       if (audioCtx){ audioCtx.close().catch(()=>{}); audioCtx=null; }
       analyser=null; sourceNode=null; dataArray=null;
 
-      // detener tracks del stream
       try{
         const tracks = (mediaRecorder && mediaRecorder.stream && mediaRecorder.stream.getTracks?.()) || [];
         tracks.forEach(t=>t.stop());
@@ -883,46 +1330,53 @@
     }
 
     async function sendAudio(base64Audio){
-      const userBubbleContent = addUserBubble('', 'transcription');
-      // Compartir pregunta de voz (placeholder hasta que llegue transcripción)
+      const rid = (crypto.randomUUID?.() || ('r_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,10)));
+
+      const userBubbleContent = addUserBubble('', 'transcription', rid);
       appendShareButtonUnder(userBubbleContent, userBubbleContent.textContent);
 
       const thinking = addSiraiaThinkingBubble();
+      thinking.dataset.rid = rid;
+
       try{
         const res = await fetch(WH_AUDIO, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-          body: JSON.stringify({ audio_base64: base64Audio })
+          headers: { 'Content-Type': 'application/json', ...getAuthHeadersWithRid(rid) },
+          body: JSON.stringify({ audio_base64: base64Audio, display_name: getDisplayNameSafe() })
         });
         let data;
         try{ data = await res.json(); }
         catch{
           const t = await res.text();
           try{ data = JSON.parse(t); }catch{
-            renderBotText(thinking, 'Respuesta no válida del servidor.');
+            renderBotText(thinking, tr('invalidServerResponse'));
             return;
           }
         }
         const payload = Array.isArray(data)? data[0]: data;
+
         if (payload && payload.transcription){
           userBubbleContent.textContent = `"${payload.transcription}"`;
-        }
-        if (typeof payload?.credits_remaining === 'number') {
-          updateCreditPill(payload.credits_remaining, payload.credits_total);
+          try { persistMessage('user', payload.transcription, payload?.request_id ?? rid); } catch {}
+          try {
+            const row = userBubbleContent.parentElement.querySelector('.share-row');
+            if (row) {
+              const btn = row.querySelector('.btn-share');
+              if (btn) btn.onclick = () => shareText(String(payload.transcription||''));
+            }
+          } catch {}
         }
         updateSiraiaBubble(thinking, payload);
       }catch{
-        thinking.textContent='Ocurrió un error. Intenta de nuevo.';
+        thinking.textContent = tr('genericTryAgain');
       }finally{
         updateUnifiedAction();
       }
     }
 
-    /* ====== Texto → Texto (pestañas) ====== */
     txtSend?.addEventListener('click', ()=>{
       const q = (txtArea.value||'').trim();
-      if(!q){ alert('Escribe una pregunta.'); return; }
-      // Pintamos pregunta y botón compartir en el chat
+      if(!q){ alert(tr('writeAQuestion')); return; }
       const content = addUserBubble(q, 'text'); appendShareButtonUnder(content, q);
       sendText(q); txtArea.value=''; autogrow(txtArea);
     });
@@ -930,59 +1384,79 @@
     async function sendText(question){
       const thinking = addSiraiaThinkingBubble();
       try{
-        // Enviamos redundante para máxima compatibilidad backend
         const res = await fetch(WH_TEXT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-          body: JSON.stringify({ text: question, pregunta: question, Texto: question })
+          body: JSON.stringify({ text: question, pregunta: question, Texto: question, display_name: getDisplayNameSafe() })
         });
         const raw = await res.text();
         let data;
         try{ data = JSON.parse(raw); }catch{ data = { text: raw }; }
 
         const payload = Array.isArray(data) ? data[0] : data;
-        const answer = payload?.Texto ?? payload?.text ?? String(raw||'');
-        // ...después de obtener "payload" y "answer"
+
         if (typeof payload?.credits_remaining === 'number') {
           updateCreditPill(payload.credits_remaining, payload.credits_total);
         }
+
+        const answer = pickMessageField(payload) || String(raw || '');
         renderBotText(thinking, answer);
+        try { persistMessage('assistant', answer, payload?.request_id); } catch {}
       }catch{
-        renderBotText(thinking, 'Lo siento, ocurrió un error al procesar tu pregunta.');
+        renderBotText(thinking, tr('errorText'));
       }finally{
         updateUnifiedAction();
       }
     }
 
-    /* ====== Imagen + Texto → Texto (formData, sin tocar backend) ====== */
     function resetPreview(){
-      // Para pestañas
       if (imgPreview){
         imgPreview.style.display='none';
         if (imgThumb) imgThumb.removeAttribute('src');
         if (imgName) imgName.textContent='';
       }
-      // Para unificada
       if (uPreview){
         uPreview.style.display='none';
         if (uThumb) uThumb.removeAttribute('src');
-        if (uName) uName.textContent='';
+        if (uName)  uName.textContent='';
       }
       if (selectedObjectURL){ URL.revokeObjectURL(selectedObjectURL); selectedObjectURL=null; }
       selectedImageFile=null;
       updateUnifiedAction();
     }
 
-    // Pestañas: seleccionador clásico
+    async function makeThumbFromFile(file, maxSide=256, quality=0.7){
+      return new Promise((resolve, reject)=>{
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = ()=>{
+          const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width * scale));
+          const h = Math.max(1, Math.round(img.height * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          URL.revokeObjectURL(url);
+          try{
+            const dataUrl = canvas.toDataURL('image/jpeg', quality);
+            resolve(dataUrl);
+          }catch(e){ reject(e); }
+        };
+        img.onerror = ()=>{ URL.revokeObjectURL(url); reject(new Error('img-load-failed')); };
+        img.src = url;
+      });
+    }
+
     imgInput?.addEventListener('change', (evt)=>{
       const f = evt.target.files && evt.target.files[0];
       resetPreview();
       if (!f){ return; }
       if (!['image/jpeg','image/png','image/webp'].includes(f.type)){
-        alert('Formato no compatible. Usa JPEG, PNG o WebP.'); imgInput.value=''; return;
+        alert(tr('formatNotSupported')); imgInput.value=''; return;
       }
       if (f.size > 10*1024*1024){
-        alert('La imagen es muy grande (máx 10 MB).'); imgInput.value=''; return;
+        alert(tr('imageTooBig')); imgInput.value=''; return;
       }
       selectedImageFile = f;
 
@@ -997,13 +1471,14 @@
       resetPreview();
     });
 
-    imgTxtSend?.addEventListener('click', ()=>{
+    imgTxtSend?.addEventListener('click', async ()=>{
       const q = (imgTxtArea.value||'').trim();
       if (!selectedImageFile){
-        alert('Primero selecciona una imagen.'); return;
+        alert(tr('selectImageFirst')); return;
       }
-      // Pintamos “mensaje del usuario” con miniatura y texto + compartir
-      const user = addUserBubble(q || '(Imagen enviada)', 'text');
+      const rid = (crypto.randomUUID?.() || ('r_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,10)));
+
+      const user = addUserBubble(q || '(Imagen enviada)', 'text', rid);
       if (selectedObjectURL){
         const wrap = document.createElement('div');
         wrap.className='preview'; wrap.style.marginTop='6px';
@@ -1014,69 +1489,212 @@
       }
       appendShareButtonUnder(user, q || '(Imagen enviada)');
 
-      // Enviamos al backend
-      sendImageAndText(selectedImageFile, q);
+      try {
+        const thumb = await makeThumbFromFile(selectedImageFile, 256, 0.7);
+        putAttachment('image', q || '(Imagen enviada)', { dataUrl: thumb });
+      } catch {}
 
-      // limpiar inputs visuales de la pestaña
+      sendImageAndText(selectedImageFile, q, rid);
+
       if (imgTxtArea){ imgTxtArea.value=''; autogrow(imgTxtArea); }
       if (imgInput){ imgInput.value=''; }
       resetPreview();
     });
 
-    async function sendImageAndText(file, promptText){
+    async function sendImageAndText(file, promptText, rid){
       const thinking = addSiraiaThinkingBubble();
+      thinking.dataset.rid = rid;
       try{
         const form = new FormData();
-        form.append('imagen', file, file.name);   // ← lo que espera n8n
-        form.append('texto',  promptText || '');  // ← prompt opcional
+        form.append('imagen', file, file.name);
+        form.append('texto',  promptText || '');
+        form.append('display_name', getDisplayNameSafe() || '');
 
         const res = await fetch(WH_IMAGE, {
           method: 'POST',
-          headers: { ...getAuthHeaders() }, // NO seteamos Content-Type (lo hace FormData)
+          headers: getAuthHeadersWithRid(rid),
           body: form
         });
 
-        let data=null, raw=null;
-        try{ data = await res.json(); }
-        catch{ raw = await res.text(); try{ data = JSON.parse(raw); }catch{} }
+        const raw = await res.text();
+        let data; try { data = JSON.parse(raw); } catch { data = raw; }
 
-        const payload = Array.isArray(data)? data[0]: data;
-        const answer = payload?.Texto ?? payload?.text ?? (typeof payload==='string'? payload : raw);
+        const payload = Array.isArray(data)? data[0] : data;
 
-        if (!res.ok || !answer || typeof answer!=='string'){
-          renderBotText(thinking, 'Lo siento, ocurrió un error al procesar la imagen.');
+        if (payload && typeof payload === 'object') {
+          const cr = Number(payload.credits_remaining ?? payload.creditsRemaining);
+          const ct = Number(payload.credits_total ?? payload.creditsTotal);
+          if (Number.isFinite(cr)) updateCreditPill(cr, Number.isFinite(ct) ? ct : undefined);
+        }
+
+        const answer =
+          (payload && typeof payload === 'object' && pickMessageField(payload)) ||
+          (typeof data === 'string' ? data : '') ||
+          raw;
+
+        if (!res.ok || !answer || typeof answer !== 'string'){
+          renderBotText(thinking, tr('errorImage'));
           return;
         }
-        // ...después de obtener "payload" y "answer"
-        if (typeof payload?.credits_remaining === 'number') {
-          updateCreditPill(payload.credits_remaining, payload.credits_total);
-        }
+
         renderBotText(thinking, answer);
+        try { persistMessage('assistant', answer, (payload && payload.request_id) ? payload.request_id : rid); } catch {}
       }catch{
-        renderBotText(thinking, 'Lo siento, ocurrió un error al procesar la imagen.');
+        renderBotText(thinking, tr('errorImage'));
       }finally{
         updateUnifiedAction();
       }
     }
 
-    /* ====== Comprar créditos (placeholder) ====== */
-    buyButton?.addEventListener('click', ()=>{
-      alert('Próximamente: compra de consultas. 🙂');
+    /* ===== Comprar créditos (integración) ===== */
+    function guessMarket(){
+      try{
+        const l = (navigator.language || '').toUpperCase();
+        if (l.includes('MX')) return 'MX';
+      }catch{}
+      return 'INTL';
+    }
+
+    // Abrir/cerrar menú
+    const pkgMenuEl = document.getElementById('pkgMenu');
+    const pkgClose  = document.getElementById('pkgClose');
+
+    function openPkgMenu(){
+      applyI18nStatic();
+      if (!pkgMenuEl) return;
+      pkgMenuEl.classList.add('open');
+      pkgMenuEl.setAttribute('aria-hidden','false');
+      document.addEventListener('keydown', onEscClose);
+      document.addEventListener('click', onOutsideClose, { capture:true });
+    }
+    function closePkgMenu(){
+      if (!pkgMenuEl) return;
+      pkgMenuEl.classList.remove('open');
+      pkgMenuEl.setAttribute('aria-hidden','true');
+      document.removeEventListener('keydown', onEscClose);
+      document.removeEventListener('click', onOutsideClose, { capture:true });
+    }
+    function onEscClose(e){ if (e.key === 'Escape') closePkgMenu(); }
+    function onOutsideClose(e){
+      if (!pkgMenuEl.contains(e.target) && e.target !== buyButton){
+        closePkgMenu();
+      }
+    }
+    pkgClose?.addEventListener('click', closePkgMenu);
+
+    // El botón principal ahora abre el selector
+    buyButton?.addEventListener('click', async ()=>{
+      const jwt = localStorage.getItem('sira_jwt') || '';
+      if (!jwt){
+        alert(tr('buyLoginFirst'));
+        window.location.href = '/registro';
+        return;
+      }
+      openPkgMenu();
     });
 
-    /* ====== ---- BARRA UNIFICADA ---- ====== */
+    // Click en una opción → iniciar checkout con pkg
+    document.querySelectorAll('.pkg-btn[data-pkg]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const pkg = btn.getAttribute('data-pkg') || '25';
+        closePkgMenu();
+        await startCheckout(pkg);
+      });
+    });
+
+    // Respaldo: links estáticos (opcional)
+    const PAYMENT_LINK_MX   = "";
+    const PAYMENT_LINK_INTL = "";
+
+    async function startCheckout(pkg){
+      const btn = document.getElementById('buyButton');
+      try{
+        const jwt = localStorage.getItem('sira_jwt') || '';
+        if (!jwt){
+          alert(tr('buyLoginFirst'));
+          window.location.href = '/registro';
+          return;
+        }
+        if (btn){ btn.disabled = true; btn.textContent = tr('buyProcessing'); }
+
+        const body = {
+          plan: (guessMarket()==='MX' ? 'mx' : 'intl')
+        };
+        if (pkg) body.pkg = String(pkg);
+
+        const res = await fetch(`${AUTH_URL}/checkout/session`, {
+          method:'POST',
+          headers:{
+            'Content-Type':'application/json',
+            'Accept':'application/json',
+            'Authorization': 'Bearer ' + jwt
+          },
+          body: JSON.stringify(body)
+        }).catch((e) => {
+          console.error('fetch failed', e);
+          return null;
+        });
+
+        if (!res) { throw new Error('NETWORK_ERROR'); }
+        if (res.status === 401 || res.status === 403){
+          alert(tr('buyLoginFirst'));
+          window.location.href = '/registro';
+          return;
+        }
+        if (!res.ok){
+          const txt = await res.text().catch(()=> '');
+          console.error('checkout/session failed', res.status, txt);
+          throw new Error(`BAD_STATUS_${res.status}`);
+        }
+
+        let data = {};
+        try { data = await res.json(); } catch(e){ console.error('json parse failed', e); }
+
+        const url = (data && (data.url || data.checkout_url || data.session_url)) || '';
+        if (url && /^https?:\/\//i.test(url)){
+          window.location.href = url;
+          return;
+        }
+
+        const link = (guessMarket()==='MX' ? PAYMENT_LINK_MX : PAYMENT_LINK_INTL);
+        if (link){
+          window.location.href = link;
+          return;
+        }
+        throw new Error('MISSING_URL');
+      }catch(e){
+        console.error('startCheckout error', e);
+        let msg = tr('buyError');
+        if (String(e.message||'').includes('BAD_STATUS_404')){
+          msg += (LANG_IS_ES
+            ? '\n\nEl endpoint /checkout/session no existe en el backend.'
+            : '\n\nEndpoint /checkout/session is missing on the backend.');
+        } else if (String(e.message||'').includes('NETWORK_ERROR')){
+          msg += (LANG_IS_ES
+            ? '\n\nProblema de red o CORS.'
+            : '\n\nNetwork or CORS problem.');
+        } else if (String(e.message||'').includes('MISSING_URL')){
+          msg += (LANG_IS_ES
+            ? '\n\nEl backend respondió sin URL de checkout.'
+            : '\n\nBackend responded without a checkout URL.');
+        }
+        alert(msg);
+      }finally{
+        if (btn){ btn.disabled = false; btn.textContent = tr('buy'); }
+      }
+    }
+
+    /* ===== Barra unificada ===== */
     function showUnified(on){
       footerUnified.style.display = on ? 'block' : 'none';
       footerTabs.style.display    = on ? 'none'  : 'block';
     }
     showUnified(UNIFIED_BAR);
 
-    // Acciones + y menú
     uPlus?.addEventListener('click', ()=> uMenu.classList.toggle('open'));
     uGal?.addEventListener('click', ()=> uFileGal.click());
     uCam?.addEventListener('click', ()=> uFileCam.click());
 
-    // Selección desde unificada
     ;[uFileGal, uFileCam].forEach(inp=>{
       inp?.addEventListener('change', (evt)=>{
         const f = evt.target.files && evt.target.files[0];
@@ -1084,8 +1702,8 @@
         if (!f) return;
 
         const okType = ['image/jpeg','image/png','image/webp','image/jpg','image/heic','image/heif'].includes(f.type);
-        if (!okType){ alert('Formato no compatible. Usa JPEG, PNG o WebP.'); evt.target.value=''; return; }
-        if (f.size > 10*1024*1024){ alert('La imagen es muy grande (máx 10 MB).'); evt.target.value=''; return; }
+        if (!okType){ alert(tr('formatNotSupported')); evt.target.value=''; return; }
+        if (f.size > 10*1024*1024){ alert(tr('imageTooBig')); evt.target.value=''; return; }
 
         selectedImageFile = f;
         selectedObjectURL = URL.createObjectURL(f);
@@ -1118,16 +1736,16 @@
     }
     uText?.addEventListener('input', ()=>{ autogrow(uText); updateUnifiedAction(); });
 
-    // Click principal en barra unificada
-    uAction?.addEventListener('click', ()=>{
+    uAction?.addEventListener('click', async ()=>{
       const hasText  = !!(uText && uText.value.trim());
       const hasImage = !!selectedImageFile;
 
       if (hasText || hasImage){
         if (hasImage){
-          // Pintar inmediatamente pregunta + miniatura + compartir
+          const rid = (crypto.randomUUID?.() || ('r_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,10)));
+
           const label = uText.value.trim() || '(Imagen enviada)';
-          const user = addUserBubble(label, 'text');
+          const user = addUserBubble(label, 'text', rid);
           if (selectedObjectURL){
             const wrap=document.createElement('div');
             wrap.className='preview'; wrap.style.marginTop='6px';
@@ -1136,9 +1754,11 @@
             user.parentElement.appendChild(wrap);
           }
           appendShareButtonUnder(user, label);
-
-          // Enviar
-          sendImageAndText(selectedImageFile, uText.value.trim());
+          try {
+            const thumb = await makeThumbFromFile(selectedImageFile, 256, 0.7);
+            putAttachment('image', label, { dataUrl: thumb });
+          } catch {}
+          sendImageAndText(selectedImageFile, uText.value.trim(), rid);
         }else{
           const q = uText.value.trim();
           const content = addUserBubble(q, 'text'); appendShareButtonUnder(content, q);
@@ -1153,8 +1773,516 @@
       }
     });
 
-    // Iniciar estado correcto del botón en unificada
+    applyI18nStatic();
     updateUnifiedAction();
+    loadHistoryAtStartup();
   </script>
+
+<script>
+(() => {
+  const API_AUTH = 'https://siraia-auth-credits.onrender.com';
+  const LS_JWT   = 'sira_jwt';
+  const LS_NAME  = 'sira_display_name';
+  const LS_DONE  = 'sira_welcome_v4_done';
+  const LS_LAST  = 'sira_last_jwt_seen';
+  const ANCHOR_ID= 'sira-welcome-anchor';
+
+  try {
+    const jwt = localStorage.getItem(LS_JWT) || '';
+    const last= localStorage.getItem(LS_LAST) || '';
+    if (jwt && jwt !== last) { localStorage.setItem(LS_LAST, jwt); localStorage.removeItem(LS_DONE); }
+  } catch {}
+
+  if (localStorage.getItem(LS_DONE) === '1') return;
+
+  function buildCard(name) {
+    const el = document.createElement('div');
+    el.id = 'welcomeCard';
+    el.style.cssText = [
+      'width:100%','border:1px solid #E0E6E0','background:#FFF','border-radius:14px',
+      'padding:14px 16px','margin:8px 0 12px','color:#3A3D3B','line-height:1.5'
+    ].join(';');
+
+    const safeName = (String(name||'').trim());
+    const title = safeName
+      ? ( (navigator.language||'es').toLowerCase().startsWith('es') ? `¡Hola ${safeName}!` : `Hi ${safeName}!`)
+      : ( (navigator.language||'es').toLowerCase().startsWith('es') ? '¡Hola!' : 'Hi!');
+    const welcomeWord = ( (navigator.language||'es').toLowerCase().startsWith('es') ? 'Bienvenid@.' : 'Welcome.');
+
+    const isEs = (navigator.language||'es').toLowerCase().startsWith('es');
+    const p1 = isEs
+      ? 'Más que mostrarte enlaces como un buscador, yo escucho tu pregunta, la entiendo y te resuelvo con ideas y soluciones. 💚'
+      : 'More than a search engine with links, I listen to your question, understand it, and reply with ideas and solutions. 💚';
+    const p2 = isEs
+      ? '<b>Puedo apoyarte en lo que necesites, desde recetas, ideas para ahorrar, dudas de tecnología y signo zodiacal hasta inspiración personal y consultas legales o médicas (siempre deberás ratificar con un profesional).</b>'
+      : '<b>I can help with whatever you need—from recipes, saving ideas, tech doubts and zodiac signs to personal inspiration and legal/medical questions (always verify with a professional).</b>';
+    const p3t = isEs ? '<b>Tienes 3 formas de conversar conmigo:</b>' : '<b>You have 3 ways to chat with me:</b>';
+    const li1 = isEs ? 'Texto a texto 💬' : 'Text to text 💬';
+    const li2 = isEs ? 'Audio a audio 🎤' : 'Audio to audio 🎤';
+    const li3 = isEs ? 'Imagen + texto → a texto 📷+💬' : 'Image + text → text 📷+💬';
+    const important = isEs ? '<b>🔘 Importante:</b>' : '<b>🔘 Important:</b>';
+    const importantBody = isEs
+      ? 'el botón circular del chat es el mismo para enviar texto y grabar audio. Toca para comenzar a grabar y toca para detener y enviar tu pregunta. La primera vez se te pedirá permiso de micrófono: toca <b>Permitir</b>.'
+      : 'the round chat button is the same to send text or record audio. Tap to start recording, tap to stop and send your question. On first use, grant microphone permission by tapping <b>Allow</b>.';
+
+    const ctaStart = isEs ? 'Clic para empezar a usar SiraIA' : 'Click to start using SiraIA';
+    const ctaHide  = isEs ? 'Ocultar' : 'Hide';
+
+    el.innerHTML = `
+      <div style="font-weight:800;margin-bottom:6px">${title} <span style="font-weight:600">${welcomeWord}</span></div>
+      <div style="font-size:14.5px">
+        <p>${p1}</p>
+        <p>${p2}</p>
+        <p>${p3t}</p>
+        <ul style="margin:6px 0 10px 18px">
+          <li>${li1}</li>
+          <li>${li2}</li>
+          <li>${li3}</li>
+        </ul>
+        <p>${important} ${importantBody}</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        <button id="wc-start" type="button"
+          style="background:#6F8576;color:#fff;border:none;padding:10px 14px;border-radius:10px;font-weight:800;cursor:pointer">
+          ${ctaStart}
+        </button>
+        <button id="wc-hide" type="button"
+          style="background:transparent;color:#556D60;border:none;font-weight:700;cursor:pointer">
+          ${ctaHide}
+        </button>
+      </div>
+    `;
+    el.querySelector('#wc-start').addEventListener('click', () => {
+      localStorage.setItem(LS_DONE, '1'); el.remove();
+      const inp = document.querySelector('input[placeholder], textarea[placeholder]');
+      if (inp) inp.focus();
+    });
+    el.querySelector('#wc-hide').addEventListener('click', () => {
+      localStorage.setItem(LS_DONE, '1'); el.remove();
+    });
+    return el;
+  }
+
+  async function getName() {
+    let name = (localStorage.getItem(LS_NAME) || '').trim();
+    if (name) return name;
+    const jwt = localStorage.getItem(LS_JWT);
+    if (!jwt) return '';
+    try {
+      const r = await fetch(API_AUTH + '/me', { headers: { Authorization: 'Bearer ' + jwt } });
+      if (!r.ok) return '';
+      const me = await r.json();
+      name = (me.display_name || (me.user && me.user.display_name) || '').trim();
+      if (name) localStorage.setItem(LS_NAME, name);
+      return name;
+    } catch { return ''; }
+  }
+
+  async function insertAtAnchor() {
+    const anchor = document.getElementById(ANCHOR_ID);
+    if (!anchor) return;
+    const name = await getName();
+    const card = buildCard(name);
+    anchor.insertAdjacentElement('afterend', card);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', insertAtAnchor);
+  } else {
+    insertAtAnchor();
+  }
+})();
+</script>
+
+
+  <div class="modal-invite" id="inviteModal" role="dialog" aria-modal="true" aria-labelledby="inviteTitle">
+    <div class="modal-card" role="document">
+      <header>
+        <h3 id="inviteTitle">Invitar</h3>
+        <button class="btn" id="inviteCloseBtn" aria-label="Cerrar">✕</button>
+      </header>
+      <div class="body">
+        <p id="inviteText">Invita a un amig@. <strong>Si hace su primera recarga en máximo 30 días, tú recibes +5 créditos.</strong></p>
+        <input id="inviteLink" type="text" readonly style="width:100%; padding:10px 12px; border:1px solid #D5DDD5; border-radius:12px; font-size:14px; margin-top:8px;" />
+        <div class="hint" id="inviteHint" style="display:none; margin-top:8px;">Inicia sesión para vincular tu cuenta.</div>
+      </div>
+      <footer>
+        <button class="btn" id="inviteShareBtn">Compartir</button>
+        <button class="btn primary" id="inviteCopyBtn">Copiar enlace</button>
+      </footer>
+    </div>
+  </div>
+
+
+<script>
+(function(){
+  const INVITE_BASE = 'https://siraia.com/register.html';
+  const LS_JWT='sira_jwt';
+  const LS_TEMP='sira_ref_id';
+
+  const t = (key) => {
+    try{
+      const lang = (navigator.language||'es').startsWith('es') ? 'es' : 'en';
+      const dict = {
+        es:{
+          invite:'Invitar',
+          inviteBody:'Invita a un amig@. <strong>Si hace su primera recarga en máximo 30 días, tú recibes +5 créditos.</strong>',
+          share:'Compartir',
+          copy:'Copiar enlace',
+          close:'Cerrar',
+          loginHint:'Inicia sesión para vincular tu cuenta.'
+        },
+        en:{
+          invite:'Invite',
+          inviteBody:'Invite a friend. <strong>If they make their first top-up within 30 days, you get +5 credits.</strong>',
+          share:'Share',
+          copy:'Copy link',
+          close:'Close',
+          loginHint:'Sign in to link this referral to your account.'
+        }
+      };
+      return dict[lang][key] || key;
+    }catch{return key;}
+  };
+
+  function getSub(){
+    try{
+      const jwt = localStorage.getItem(LS_JWT);
+      if(!jwt) return null;
+      const parts = jwt.split('.');
+      if(parts.length<2) return null;
+      const payload = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/')), c=>c.charCodeAt(0))));
+      return payload.sub || payload.user_id || null;
+    }catch{ return null; }
+  }
+  async function getSubViaMe(){
+    try{
+      const jwt = localStorage.getItem(LS_JWT);
+      if(!jwt) return null;
+      const r = await fetch('https://siraia-auth-credits.onrender.com/me',{headers:{'Authorization':'Bearer '+jwt}});
+      if(!r.ok) return null;
+      const j = await r.json();
+      return j.sub || j.user_id || null;
+    }catch{return null;}
+  }
+  function ensureTemp(){
+    let id = localStorage.getItem(LS_TEMP);
+    if(!id){ id = 'temp_'+Math.random().toString(36).slice(2,10); localStorage.setItem(LS_TEMP,id); }
+    return id;
+  }
+  async function computeRefId(){
+    let sub = getSub();
+    if(!sub){
+      sub = await getSubViaMe();
+    }
+    return sub || ensureTemp();
+  }
+
+  function openInvite(){
+    const modal = document.getElementById('inviteModal');
+    const title = document.getElementById('inviteTitle');
+    const bodyP = document.getElementById('inviteText');
+    const hint = document.getElementById('inviteHint');
+    const shareBtn = document.getElementById('inviteShareBtn');
+    const copyBtn = document.getElementById('inviteCopyBtn');
+    const linkInput = document.getElementById('inviteLink');
+    title.textContent = t('invite');
+    bodyP.innerHTML = t('inviteBody');
+    shareBtn.textContent = t('share');
+    copyBtn.textContent = t('copy');
+    document.getElementById('inviteCloseBtn').textContent = '✕';
+
+    computeRefId().then(refId => {
+      const hasSession = !!getSub();
+      const link = INVITE_BASE + '?ref=' + encodeURIComponent(refId);
+      linkInput.value = link;
+      hint.style.display = hasSession ? 'none' : 'block';
+      modal.setAttribute('open','');
+      linkInput.focus();
+      linkInput.select();
+    });
+
+    function onKey(e){ if(e.key==='Escape'){ closeInvite(); } }
+    document.addEventListener('keydown', onKey, {once:true});
+    modal.addEventListener('click', (e)=>{ if(e.target===modal) closeInvite(); });
+  }
+
+  function closeInvite(){
+    document.getElementById('inviteModal').removeAttribute('open');
+  }
+
+  async function shareInvite(){
+    const link = document.getElementById('inviteLink').value;
+    const msg = document.getElementById('inviteText').textContent + ' ' + link;
+    if(navigator.share){
+      try{ await navigator.share({text: msg, url: link}); }catch{}
+    }else{
+      // Fallback a WhatsApp Web
+      const url = 'https://wa.me/?text=' + encodeURIComponent(msg);
+      window.open(url,'_blank');
+    }
+  }
+
+  async function copyInvite(){
+    const link = document.getElementById('inviteLink').value;
+    try{
+      await navigator.clipboard.writeText(link);
+      // feedback suave
+      document.getElementById('inviteCopyBtn').textContent = '✓';
+      setTimeout(()=>document.getElementById('inviteCopyBtn').textContent = t('copy'), 1200);
+    }catch{}
+  }
+
+  window.addEventListener('DOMContentLoaded', ()=>{
+    const btn = document.getElementById('inviteButton');
+    if(btn){
+      btn.textContent = t('invite');
+      btn.addEventListener('click', openInvite);
+    }
+    const closeBtn = document.getElementById('inviteCloseBtn');
+    if(closeBtn){ closeBtn.addEventListener('click', closeInvite); }
+    document.getElementById('inviteShareBtn')?.addEventListener('click', shareInvite);
+    document.getElementById('inviteCopyBtn')?.addEventListener('click', copyInvite);
+  });
+})();
+</script>
+
+
+  <!-- Bottom-Sheet: Sugerencias -->
+  <div id="suggBackdrop" class="sheet-backdrop" hidden></div>
+  <aside id="suggSheet" class="sheet" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="suggTitle">
+    <header>
+      <button id="suggBack" class="btn" style="display:none">◀︎</button>
+      <h3 id="suggTitle">Ideas para preguntar</h3>
+      <button id="suggClose" class="close" aria-label="Cerrar">✕</button>
+    </header>
+    <div id="suggBody" class="body"></div>
+    <div class="footer">
+      <span id="suggHint" class="muted">Toca una sugerencia para insertarla. Edita lo que está entre [[ ]] antes de enviar.</span>
+      <button id="suggMore" class="btn" style="margin-left:auto;display:none">Más sugerencias</button>
+    </div>
+  </aside>
+
+
+<script>
+(function(){
+  const isEs = (document.documentElement.lang || navigator.language || 'es').toLowerCase().startsWith('es');
+  const T = (node) => (typeof node === 'string') ? node : (isEs ? (node.es||'') : (node.en||''));
+
+  const CATS = [
+    { id:'salud',  ico:'🩺', title: T({es:'Salud y Bienestar',en:'Health & Wellness'}) },
+    { id:'fin',    ico:'💰', title: T({es:'Finanzas y Economía Personal',en:'Personal Finance'}) },
+    { id:'legal',  ico:'⚖️', title: T({es:'Asuntos Legales y Trámites',en:'Legal & Government'}) },
+    { id:'ocio',   ico:'🎬', title: T({es:'Entretenimiento, Viajes, Horóscopos y Motivación',en:'Entertainment, Travel & Horoscopes'}) },
+    { id:'cocina', ico:'🍲', title: T({es:'Recetas, Cocina y Alimentación',en:'Cooking & Nutrition'}) },
+    { id:'tech',   ico:'📱', title: T({es:'Tecnología y Vida Digital',en:'Tech & Digital Life'}) },
+    { id:'seg',    ico:'🛡️', title: T({es:'Seguridad Digital y Fraudes',en:'Security & Scams'}) },
+    { id:'hogar',  ico:'🛠️', title: T({es:'Hogar y Reparaciones',en:'Home & Repairs'}) },
+    { id:'familia',ico:'👨‍👩‍👧‍👦', title: T({es:'Familia y Relaciones',en:'Family & Relationships'}) },
+    { id:'neg',    ico:'📊', title: T({es:'Negocios y Profesión',en:'Business & Work'}) },
+  ];
+
+  const GUIDE_TEXT = {
+    salud:{es:"Describe tu situación, edad y objetivos. Incluye síntomas, duración y medicamentos. Pide un plan claro (qué hacer hoy, qué vigilar, cuándo ir al médico).",en:"Describe your situation, age and goals. Include symptoms, duration and medicines. Ask for a clear plan (what to do today, what to watch, when to see a doctor)."},
+    fin:{es:"Indica ingreso, gastos fijos, deudas, meta y plazo. Pide un plan paso a paso con tabla simple y recordatorios.",en:"Share income, fixed costs, debts, goal and timeframe. Ask for a step‑by‑step plan with a simple table and reminders."},
+    legal:{es:"Explica el trámite o situación, tu ciudad/país y documentos con que cuentas. Pide pasos, requisitos y costos aproximados.",en:"Explain the procedure or situation, your city/country and documents you have. Ask for steps, requirements and approximate fees."},
+    ocio:{es:"Di quiénes van, fecha, presupuesto, gustos y objetivo (celebrar/relajar). Pide itinerario o ideas con horarios y opciones.",en:"Say who goes, date, budget, preferences and objective (celebrate/relax). Ask for an itinerary or ideas with times and options."},
+    cocina:{es:"Cuenta cuántas personas, restricciones (sin lactosa, etc.), tiempo y presupuesto. Pide menú y lista de súper.",en:"Tell how many people, restrictions (lactose‑free, etc.), time and budget. Ask for a menu and a grocery list."},
+    tech:{es:"Indica tu dispositivo/app/modelo y el problema exacto. Pide pasos simples con capturas mentales y alternativas.",en:"State your device/app/model and the exact problem. Ask for simple steps with mental screenshots and alternatives."},
+    seg:{es:"Describe el riesgo (phishing/robo), servicio afectado y qué ya hiciste. Pide checklist de seguridad y próximos pasos.",en:"Describe the risk (phishing/theft), affected service and what you already did. Ask for a security checklist and next steps."},
+    hogar:{es:"Explica el área, materiales, herramientas disponibles y presupuesto. Pide soluciones seguras paso a paso.",en:"Explain the area, materials, tools you have and budget. Ask for safe step‑by‑step fixes."},
+    familia:{es:"Di con quién hablas, situación y objetivo (mejorar diálogo, acuerdos). Pide guion respetuoso y plan semanal.",en:"Say who you talk to, the situation and goal (improve dialogue, agreements). Ask for a respectful script and a weekly plan."},
+    neg:{es:"Cuenta tu idea/negocio, público, precio y meta. Pide acciones de esta semana y una oferta clara.",en:"Tell your idea/business, audience, price and goal. Ask for this week’s actions and a clear offer."}
+  };
+  const GUIDE_TPL = {
+    salud:{es:"Tengo [[edad]] años y siento [[síntomas]] desde hace [[días]]. Tomo [[medicamentos]]. ¿Me das un plan claro para hoy, señales de alarma y qué preguntar al [[especialista]]?",en:"I’m [[age]] and I’ve had [[symptoms]] for [[days]]. I take [[medicines]]. Give me a clear plan for today, red flags, and questions for the [[specialist]]."},
+    fin:{es:"Ingreso mensual [[monto]]. Gastos fijos [[lista]]. Deuda [[monto]] a [[tasa]]. Meta: [[objetivo]] en [[meses]]. Hazme un plan con tabla y recordatorios.",en:"Monthly income [[amount]]. Fixed costs [[list]]. Debt [[amount]] at [[rate]]. Goal: [[target]] in [[months]]. Make a plan with a table and reminders."},
+    legal:{es:"Necesito hacer [[trámite]] en [[ciudad/país]]. Tengo [[documentos]]. ¿Cuáles son los pasos, requisitos, costos y tiempos aproximados?",en:"I need to do [[procedure]] in [[city/country]]. I have [[documents]]. What are the steps, requirements, fees and typical timelines?"},
+    ocio:{es:"Planea [[actividad: cena/viaje/plan en casa]] para [[quiénes]] el [[día/hora]] en [[lugar]], con presupuesto de [[monto]] y duración [[horas/días]]. Objetivo: [[celebrar/relajar]]. Preferencias: [[restricciones]].",en:"Plan [[activity: dinner/trip/home plan]] for [[who]] on [[date/time]] at/in [[place]], budget [[amount]], duration [[hours/days]]. Goal: [[celebrate/relax]]. Preferences: [[restrictions]]."},
+    cocina:{es:"Quiero menú para [[número]] personas con [[restricciones]]. Tiempo [[minutos]]. Presupuesto [[monto]]. Dame recetas y lista de compras.",en:"Menu for [[number]] people with [[restrictions]]. Time [[minutes]]. Budget [[amount]]. Give recipes and a shopping list."},
+    tech:{es:"En mi [[Android/iPhone/modelo]] tengo el problema: [[describe]]. Guíame con pasos sencillos y opciones si no funciona.",en:"On my [[Android/iPhone/model]] I have this issue: [[describe]]. Guide me with simple steps and alternatives if it fails."},
+    seg:{es:"Creo que recibí [[phishing/fraude]] en [[servicio]]. Ya hice [[acciones]]. Indícame checklist de seguridad y qué más debo hacer.",en:"I think I got [[phishing/scam]] on [[service]]. I already did [[actions]]. Give me a security checklist and next steps."},
+    hogar:{es:"Arreglar [[problema en casa]] en [[área]]. Tengo [[herramientas]]. Presupuesto [[monto]]. Dame pasos seguros y materiales.",en:"Fix [[home issue]] in [[area]]. I have [[tools]]. Budget [[amount]]. Give safe steps and materials."},
+    familia:{es:"Quiero hablar con [[persona]] sobre [[tema]] sin discutir. Dame un guion respetuoso y un plan de 7 días para mejorar.",en:"I want to talk to [[person]] about [[topic]] without arguing. Give me a respectful script and a 7‑day improvement plan."},
+    neg:{es:"Tengo un negocio/idea de [[producto/servicio]] para [[público]]. Precio [[monto]]. Meta esta semana [[acción]]. Dame 5 pasos y oferta clara.",en:"I have a [[product/service]] business for [[audience]]. Price [[amount]]. Goal this week [[action]]. Give me 5 steps and a clear offer."}
+  };
+  const MICRO = {
+    salud:[{es:"¿Qué preguntas llevar a mi cita con [[especialista]] por [[motivo]]?",en:"What questions should I take to my [[specialist]] visit about [[reason]]?"},{es:"Plan semanal para mejorar [[sueño/estrés]] con pasos sencillos.",en:"Weekly plan to improve [[sleep/stress]] with simple steps."}],
+    fin:[{es:"Ayúdame a recortar gastos en [[categoría]] sin perder calidad.",en:"Help me cut expenses in [[category]] without losing quality."},{es:"¿Conviene pagar [[servicio]] anual o mensual para ahorrar?",en:"Is it cheaper to pay [[service]] yearly or monthly?"}],
+    legal:[{es:"Requisitos para renovar [[identificación/licencia]] en [[ciudad]].",en:"Requirements to renew [[ID/license]] in [[city]]."},{es:"Carta de reclamación por [[problema]] con tono respetuoso.",en:"Draft a claim letter for [[issue]] with a respectful tone."}],
+    ocio:[{es:"Itinerario de 1 día en [[ciudad]] con 5 imperdibles.",en:"1‑day itinerary in [[city]] with 5 must‑sees."},{es:"Ideas para celebrar un cumpleaños sencillo con [[presupuesto]].",en:"Ideas to celebrate a simple birthday with [[budget]]."}],
+    cocina:[{es:"Tres recetas con [[ingrediente]] en 20 minutos.",en:"Three recipes with [[ingredient]] in 20 minutes."},{es:"Menú económico por [[monto]] al día con lista de súper.",en:"Budget menu for [[amount]] a day with a grocery list."}],
+    tech:[{es:"Mi teléfono va lento, dame diagnóstico y soluciones rápidas.",en:"My phone is slow—give diagnosis and quick fixes."},{es:"Activa verificación en dos pasos en [[servicio]] paso a paso.",en:"Enable two‑factor auth on [[service]] step by step."}],
+    seg:[{es:"Checklist para evitar fraudes al comprar en [[plataforma]].",en:"Checklist to avoid scams when buying on [[platform]]."},{es:"Qué hacer si abrí un enlace sospechoso por error.",en:"What to do if I clicked a suspicious link."}],
+    hogar:[{es:"Cómo quitar moho del baño sin dañar superficies.",en:"How to remove bathroom mold without damage."},{es:"Plan de limpieza semanal en 30 minutos.",en:"Weekly cleaning plan in 30 minutes."}],
+    familia:[{es:"Cómo poner límites sanos con [[familiar]] manteniendo respeto.",en:"How to set healthy boundaries with [[relative]]."},{es:"Ideas de tiempo de calidad familiar con [[presupuesto]].",en:"Family quality time ideas with [[budget]]."}],
+    neg:[{es:"Guion de ventas para ofrecer [[producto]] por WhatsApp.",en:"Sales script to offer [[product]] on WhatsApp."},{es:"¿Conviene vender en [[plataforma]]? Dame pros y contras.",en:"Is selling on [[platform]] worth it? Pros and cons."}]
+  };
+
+  function el(q){ return document.querySelector(q); }
+  function activeInput(){
+    const a = el('#u-text'), b = el('#txt-prompt'), c = el('#imgtxt-prompt');
+    const cand = [a,b,c].filter(Boolean);
+    for (const t of cand){
+      const s = window.getComputedStyle(t);
+      if (s.display !== 'none' && s.visibility !== 'hidden') return t;
+    }
+    return a || b || c || null;
+  }
+  function insertAtCursor(textarea, text){
+    if (!textarea) return;
+    const start = textarea.selectionStart ?? textarea.value.length;
+    const end   = textarea.selectionEnd ?? textarea.value.length;
+    const before = textarea.value.slice(0,start);
+    const after  = textarea.value.slice(end);
+    textarea.value = before + text + after;
+    textarea.focus();
+    const pos = before.length + text.length;
+    textarea.setSelectionRange(pos, pos);
+    textarea.dispatchEvent(new Event('input', {bubbles:true}));
+  }
+  function closePlusMenu(){
+    try{
+      const menu = document.getElementById('u-menu');
+      if (!menu) return;
+      const style = window.getComputedStyle(menu);
+      const visible = style.display !== 'none' && style.visibility !== 'hidden';
+      if (!visible) return;
+      const toggler = document.getElementById('u-plus') || document.querySelector('[data-role="u-plus"], .u-plus, button[aria-controls="u-menu"]');
+      if (toggler && typeof toggler.click === 'function'){ toggler.click(); return; }
+      document.body.classList.remove('u-menu-open','menu-open');
+      menu.classList.remove('open','show','visible');
+      menu.style.display = 'none'; setTimeout(()=>{ menu.style.display=''; }, 0);
+    }catch(e){}
+  }
+
+  const backdrop = el('#suggBackdrop');
+  const sheet    = el('#suggSheet');
+  const body     = el('#suggBody');
+  const titleEl  = el('#suggTitle');
+  const backBtn  = el('#suggBack');
+  const closeBtn = el('#suggClose');
+  const moreBtn  = el('#suggMore');
+  const hint     = el('#suggHint');
+
+  function openSheet(){ backdrop.hidden=false; backdrop.classList.add('open'); sheet.classList.add('open'); sheet.setAttribute('aria-hidden','false'); }
+  function closeSheet(){ sheet.classList.remove('open'); backdrop.classList.remove('open'); sheet.setAttribute('aria-hidden','true'); setTimeout(()=>backdrop.hidden=true,200); }
+
+  function renderCats(){
+    titleEl.textContent = isEs ? 'Ideas para preguntar / Elige el tipo de pregunta' : 'Ideas to ask / Choose a type';
+    hint.textContent = isEs ? 'Toca una categoría para ver sugerencias.' : 'Tap a category to see suggestions.';
+    backBtn.style.display = 'none'; moreBtn.style.display = 'none';
+    const wrap = document.createElement('div'); wrap.className='grid';
+    [{id:'salud',ico:'🩺'},{id:'fin',ico:'💰'},{id:'legal',ico:'⚖️'},{id:'ocio',ico:'🎬'},{id:'cocina',ico:'🍲'},{id:'tech',ico:'📱'},{id:'seg',ico:'🛡️'},{id:'hogar',ico:'🛠️'},{id:'familia',ico:'👨‍👩‍👧‍👦'},{id:'neg',ico:'📊'}].forEach(c=>{
+      const conf = CATS.find(x=>x.id===c.id);
+      const b = document.createElement('button'); b.className='cat'; b.innerHTML = '<span class="ico">'+c.ico+'</span><span>'+conf.title+'</span>';
+      b.addEventListener('click', ()=> renderDetail(c.id, 'guide'));
+      wrap.appendChild(b);
+    });
+    body.innerHTML=''; body.appendChild(wrap);
+  }
+
+  function renderGuide(catId, tabs, content, setActive){
+    setActive('guide'); moreBtn.style.display='none';
+    hint.textContent = isEs ? 'Toca una sugerencia para insertarla. Edita lo que está entre [[ ]] y envía.' : 'Tap to insert. Edit the [[ ]] and send.';
+    const g = GUIDE_TEXT[catId], tpl = GUIDE_TPL[catId], micros = MICRO[catId] || [];
+    const guide = document.createElement('section'); guide.className='guide';
+    const h = document.createElement('h4'); h.textContent = isEs ? 'Cómo pedirlo mejor' : 'How to ask better';
+    const p = document.createElement('p'); p.textContent = T(g);
+    const d = document.createElement('div'); d.className='tpl'; d.textContent = T(tpl);
+    const actions = document.createElement('div'); actions.className='actions';
+    const btnIns = document.createElement('button'); btnIns.className='btn small'; btnIns.textContent = isEs ? 'Insertar plantilla' : 'Insert template';
+    btnIns.onclick = ()=>{ insertAtCursor(activeInput(), d.textContent); closeSheet(); closePlusMenu(); try{ activeInput()?.scrollIntoView({block:'nearest'});}catch{}};
+    actions.appendChild(btnIns);
+    guide.appendChild(h); guide.appendChild(p); guide.appendChild(d); guide.appendChild(actions);
+
+    const microWrap = document.createElement('div'); microWrap.className='micro-list';
+    micros.forEach(m=>{
+      const it = document.createElement('button'); it.className='micro-item'; it.textContent = T(m);
+      it.addEventListener('click', ()=>{ insertAtCursor(activeInput(), it.textContent); closeSheet(); closePlusMenu(); });
+      microWrap.appendChild(it);
+    });
+
+    content.innerHTML=''; content.appendChild(guide); content.appendChild(microWrap);
+  }
+
+  async function renderExamples(catId, tabs, content, setActive){
+    setActive('examples');
+    hint.textContent = isEs ? 'Explora ejemplos y toca para insertarlo.' : 'Browse examples and tap to insert.';
+    const lang = isEs ? 'es' : 'en';
+    const url = `/suggestions/v1/${lang}/${catId}.json`; // Opción B: ruta pública simple
+    content.textContent = isEs ? 'Cargando…' : 'Loading…';
+
+    async function fromCacheFirst(req){
+      if (!('caches' in window)) return null;
+      const cache = await caches.open('sira-sugg-v1');
+      const cached = await cache.match(req);
+      if (cached) fetch(req).then(r=>{ if(r.ok) cache.put(req, r.clone()); }).catch(()=>{});
+      else fetch(req).then(r=>{ if(r.ok) cache.put(req, r.clone()); }).catch(()=>{});
+      return cached ? cached.clone() : null;
+    }
+
+    let resp = await fromCacheFirst(url);
+    if (!resp) { try { resp = await fetch(url, {credentials:'omit'}); } catch(e) { resp = null; } }
+
+    let list = [];
+    try { if (resp && resp.ok) list = await resp.json(); } catch(e) { list = []; }
+    if (!Array.isArray(list)) list = [];
+    if (list.length === 0) { content.textContent = isEs ? 'Sin conexión o sin ejemplos. Usa la Guía.' : 'Offline or no examples. Use Guide.'; return; }
+
+    list = list.slice().sort(()=>Math.random()-0.5);
+    const wrapper = document.createElement('div'); wrapper.className='list';
+    list.slice(0,20).forEach(txt=>{
+      const it = document.createElement('button'); it.className='item'; it.textContent = txt;
+      it.addEventListener('click', ()=>{ insertAtCursor(activeInput(), txt); closeSheet(); closePlusMenu(); });
+      wrapper.appendChild(it);
+    });
+    content.innerHTML=''; content.appendChild(wrapper);
+
+    moreBtn.style.display = (list.length>20) ? 'inline-block' : 'none';
+    let page=1;
+    moreBtn.onclick = ()=>{
+      const next = list.slice(page*20,(page+1)*20);
+      next.forEach(txt=>{
+        const it = document.createElement('button'); it.className='item'; it.textContent = txt;
+        it.addEventListener('click', ()=>{ insertAtCursor(activeInput(), txt); closeSheet(); closePlusMenu(); });
+        wrapper.appendChild(it);
+      });
+      page++; if ((page*20)>=list.length) moreBtn.style.display='none';
+    };
+  }
+
+  function renderDetail(catId, mode){
+    const cat = CATS.find(c=>c.id===catId);
+    titleEl.textContent = cat ? cat.title : '';
+    backBtn.style.display = 'inline-block';
+
+    const tabs = document.createElement('div'); tabs.className='sugg-tabs';
+    const tabGuide = document.createElement('button'); tabGuide.className='sugg-tab'; tabGuide.textContent = isEs ? 'Guía' : 'Guide';
+    const tabList  = document.createElement('button'); tabList.className='sugg-tab';  tabList.textContent  = isEs ? 'Ejemplos' : 'Examples';
+    tabs.appendChild(tabGuide); tabs.appendChild(tabList);
+
+    const content = document.createElement('div'); content.id='suggContent';
+    body.innerHTML=''; body.appendChild(tabs); body.appendChild(content);
+    function setActive(which){ tabGuide.classList.toggle('active', which==='guide'); tabList.classList.toggle('active', which==='examples'); }
+
+    tabGuide.onclick = ()=> renderGuide(catId, tabs, content, setActive);
+    tabList.onclick  = ()=> renderExamples(catId, tabs, content, setActive);
+
+    if (mode==='examples') renderExamples(catId, tabs, content, setActive);
+    else renderGuide(catId, tabs, content, setActive);
+  }
+
+  // Wire-up
+  const btn = document.getElementById('u-suggestions');
+  if (btn){ btn.addEventListener('click', ()=>{ renderCats(); openSheet(); }); btn.textContent = isEs ? 'Sugerencias' : 'Suggestions'; }
+  document.getElementById('suggBack')?.addEventListener('click', renderCats);
+  document.getElementById('suggClose')?.addEventListener('click', ()=>{ closeSheet(); });
+  document.getElementById('suggBackdrop')?.addEventListener('click', closeSheet);
+  document.addEventListener('keydown', e=>{ if (e.key==='Escape') closeSheet(); });
+})();
+</script>
+
+<script src="/auth-credits/referral.js"></script>
 </body>
 </html>

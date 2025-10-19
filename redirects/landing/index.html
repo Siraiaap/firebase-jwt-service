@@ -10,27 +10,34 @@
   <meta property="og:description" content="Tú preguntas, yo me adapto. Respuestas claras en tu idioma." />
   <meta property="og:type" content="website" />
   <meta property="og:image" content="/landing/media/posters/og.jpg" />
-  <link rel="preload" href="/landing/styles.css?v=1" as="style">
-  <link rel="stylesheet" href="/landing/styles.css?v=1" />
+  <link rel="preload" href="/landing/styles.css?v=2" as="style">
+  <link rel="stylesheet" href="/landing/styles.css?v=2" />
   <link rel="icon" href="/auth-credits/icons/icon-192.png" sizes="192x192" />
+  <!-- …otras metas/links… -->
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#6F8576">
 </head>
 <body>
-  <header class="site-header">
-    <div class="container header-inner">
-      <a class="brand" href="#hero" aria-label="SiraIA">SiraIA</a>
-      <nav aria-label="Primary">
-        <a href="#why" data-i18n="nav_why">¿Por qué SiraIA?</a>
-        <a href="#how" data-i18n="nav_how">Cómo funciona</a>
-        <a href="#examples" data-i18n="nav_examples">Ejemplos</a>
-        <a href="#pricing" data-i18n="nav_pricing">Precios</a>
-        <a href="#videos" data-i18n="nav_videos">Videos</a>
-        <a href="#faq" data-i18n="nav_faq">FAQ</a>
-      </nav>
-      <div class="header-cta">
-        <a id="ctaHeader" class="btn primary" href="https://siraia.com/register.html" data-i18n="cta_signup">Regístrate</a>
-      </div>
+  <header class="nav">
+  <div class="nav__row">
+    <a class="brand" href="/">SiralA</a>
+
+    <button id="menuBtn" class="nav__burger" aria-label="Abrir menú">
+      <span></span><span></span><span></span>
+    </button>
+
+    <nav id="menu" class="nav__links">
+      <a href="#por-que">¿Por qué SiraIA?</a>
+      <a href="#como-funciona">Cómo funciona</a>
+      <a href="#ejemplos">Ejemplos</a>
+      <a href="#precios">Precios</a>
+      <a href="#videos">Videos</a>
+      <a href="#faq">FAQ</a>
+      <!-- ⚠️ Quitamos el botón corto “Regístrate” del header -->
+      <a class="btn cta" href="/register.html">Regístrate para empezar</a>
+    </nav>
     </div>
-  </header>
+    </header>
 
   <main>
     <!-- HERO -->
@@ -41,7 +48,6 @@
           <p class="lead" data-i18n="hero_sub">Tú preguntas, yo me adapto.</p>
           <div class="hero-actions">
             <a id="ctaHero" class="btn xl primary" href="https://siraia.com/register.html" data-i18n="cta_start">Regístrate para empezar</a>
-            <button id="btnInstall" class="btn xl ghost" data-i18n="cta_install">Añadir acceso rápido</button>
           </div>
           <div class="chips">
             <span data-i18n="chip_spanish">En español</span>
@@ -246,9 +252,8 @@
     </div>
   </footer>
 
-  <script src="/landing/landing.js?v=1" type="module"></script>
-  <link rel="preload" href="/landing/pwa-install.css?v=1" as="style">
-  <link rel="stylesheet" href="/landing/pwa-install.css?v=1">
-  <script src="/landing/pwa-install.js?v=1" defer></script>
+  <script src="/landing/landing.js?v=2" type="module"></script>
+  <link rel="preload" href="/landing/pwa-install.css?v=2" as="style">
+  <link rel="stylesheet" href="/landing/pwa-install.css?v=2">
 </body>
 </html>

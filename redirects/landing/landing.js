@@ -8,7 +8,7 @@ let LANG = localStorage.getItem('landing_lang') || LANG_DEFAULT;
 
 async function loadI18n(lang){
   try{
-    const res = await fetch(`/landing/i18n/${lang}.json?v=1`);
+    const res = await fetch(`/landing/i18n/${lang}.json?v=2`);
     return await res.json();
   }catch{ return {}; }
 }
@@ -124,28 +124,28 @@ async function renderExamples(){
     ch.classList.toggle('active', ch.dataset.cat === currentCat);
   });
   const wrap = qs('#exampleList');
-  wrap.innerHTML = '<div class="notice">...</div>';
-  const items = await fetchCat(CAT_MAP[currentCat]);
-  wrap.innerHTML = '';
-  const lang = LANG;
-  items.slice(0,6).forEach(text=>{
-    const card = document.createElement('div');
-    card.className = 'example';
-    card.innerHTML = `
-      <p>${text}</p>
-      <div class="actions">
-        <button class="btn" data-copy>${lang==='es'?'Copiar':'Copy'}</button>
-        <a class="btn primary" data-use href="https://siraia.com/register.html">${lang==='es'?'Usar este ejemplo':'Use this example'}</a>
-      </div>
-    `;
-    const a = card.querySelector('[data-use]');
-    a.href = withRef(a.href);
-    a.addEventListener('click', ()=>{ try{ localStorage.setItem('landing_prefill', text); }catch{} });
-    card.querySelector('[data-copy]').addEventListener('click', async ()=>{
-      try{ await navigator.clipboard.writeText(text);}catch{}
-      card.querySelector('[data-copy]').textContent = lang==='es'?'Copiado':'Copied';
-      setTimeout(()=>{ card.querySelector('[data-copy]').textContent = lang==='es'?'Copiar':'Copy'; }, 1200);
-    });
+wrap.innerHTML = '<div class="notice">...</div>';
+
+const items = await fetchCat(CAT_MAP[currentCat]);
+wrap.innerHTML = '';
+
+// Mostramos sólo 3 ejemplos y SIN botones
+items.slice(0, 3).forEach(text => {
+  const card = document.createElement('div');
+  card.className = 'example';
+
+  const p = document.createElement('p');
+  p.textContent = text;    // ← evita XSS y no usamos innerHTML
+
+  // Si NO quieres ninguna acción, deja esto así y NO añadas listeners.
+  // Si más adelante quieres que al tocar la tarjeta abra el chat con el ejemplo precargado:
+  // card.addEventListener('click', () => {
+  //   location.href = 'https://siraia.com/?q=' + encodeURIComponent(text);
+  // });
+
+  card.appendChild(p);
+  wrap.appendChild(card);
+});
     wrap.appendChild(card);
   });
 }
@@ -157,7 +157,7 @@ qsa('.categories .chip').forEach(btn=>{
 let videos = [];
 async function loadVideos(){
   try{
-    const res = await fetch('/landing/videos.json?v=1');
+    const res = await fetch('/landing/videos.json?v=2');
     videos = await res.json();
   }catch{ videos = []; }
 }
@@ -211,3 +211,10 @@ document.querySelector('#y').textContent = new Date().getFullYear();
   renderVideos();
   renderExamples();
 })();
+
+// Menú hamburguesa
+const menuBtn = document.getElementById('menuBtn');
+const menu = document.getElementById('menu');
+if (menuBtn && menu){
+  menuBtn.addEventListener('click', ()=> menu.classList.toggle('open'));
+}

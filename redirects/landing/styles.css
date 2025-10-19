@@ -58,3 +58,18 @@ nav a{color:var(--ink);text-decoration:none;margin:0 10px}
 .site-footer{padding:18px 0;background:#F6F4EF}
 .footer-inner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .foot-links a{color:#606A66;text-decoration:none;margin-right:10px}
+.nav{position:sticky;top:0;background:#fff;z-index:40;border-bottom:1px solid #eee}
+.nav__row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px}
+.brand{font-weight:900;font-size:20px;color:#2c2c2c;text-decoration:none}
+.nav__links{display:flex;gap:14px;align-items:center}
+.nav__links a{white-space:nowrap}
+.nav__burger{display:none;background:transparent;border:0;width:36px;height:36px;flex-shrink:0}
+.nav__burger span{display:block;height:2px;background:#2c2c2c;margin:6px 0;border-radius:1px}
+
+@media (max-width: 820px){
+  .nav__burger{display:inline-block}
+  .nav__links{position:fixed;inset:56px 0 auto 0;background:#fff;border-bottom:1px solid #eee;
+    padding:10px 14px;overflow-x:auto;display:none}
+  .nav__links.open{display:flex}
+  .nav__links .btn.cta{margin-left:auto}
+}
