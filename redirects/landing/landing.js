@@ -1,221 +1,257 @@
-// redirects/landing/landing.js  (v=8)
-// OAuth Google/Facebook -> /signup -> guarda JWT del servicio -> /me -> chat
-const qs  = (s, r=document) => r.querySelector(s);
-const qsa = (s, r=document) => Array.from(r.querySelectorAll(s));
-const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+/* redirects/landing/landing.js — v9
+   - i18n ES/EN básico
+   - Referidos (?ref) propagados a CTAs
+   - Login social (Google/Facebook) -> /signup -> guarda sira_jwt + redirige a chat
+   - Fallback a /register.html si el backend no devuelve jwt
+*/
 
-/* ------- Estado & util ------- */
+const qs = (s, r = document) => r.querySelector(s);
+const qsa = (s, r = document) => Array.from(r.querySelectorAll(s));
+
+// ------------------ Config ------------------
+const AUTH_BASE = 'https://siraia-auth-credits.onrender.com';
+const CHAT_URL = 'https://siraia.com/';
+const REGISTER_URL = 'https://siraia.com/register.html';
+
+// Idioma
+const LANG_DEFAULT = (navigator.language || 'es').toLowerCase().startsWith('es') ? 'es' : 'en';
+let LANG = localStorage.getItem('landing_lang') || LANG_DEFAULT;
+
+// Ref de referidos
 const url = new URL(location.href);
-const ref = url.searchParams.get('ref');
-if (ref) localStorage.setItem('sira_ref', ref);
+const REF = (()=>{
+  const v = url.searchParams.get('ref');
+  if (!v) return localStorage.getItem('sira_ref') || '';
+  // sanea y persiste
+  const safe = v.replace(/[^A-Za-z0-9_.\-:=+]/g, '').slice(0,80);
+  localStorage.setItem('sira_ref', safe);
+  return safe;
+})();
 
-let LANG = (localStorage.getItem('landing_lang') ||
-  ((navigator.language||'es').toLowerCase().startsWith('es')?'es':'en'));
+// Nombre preferido (input)
+const getPreferredName = () => {
+  const raw = (qs('#prefName')?.value || '').trim();
+  const limited = raw.slice(0,40);
+  return limited || (LANG==='es' ? 'amig@' : 'friend');
+};
 
+// ------------------ i18n ------------------
 const I18N = {
   es: {
-    slogan: 'SiraIA: tu compañera digital que entiende, responde y se adapta a ti.',
-    sub: 'Más que un buscador que te llena de ligas, es una Inteligencia Artificial pensada para todos los no expertos: fácil, cálida y directa. Da respuestas útiles de todo tipo sin que necesites saber de tecnología.',
-    access_title: 'Elige cómo quieres entrar',
-    label_short: 'Ingresa aquí el nombre o diminutivo con el que deseas que SiraIA se dirija a ti.',
-    ph_short: 'Ej: Guille, Ana, Sr. Pérez',
+    hero_title: 'SiralA: tu compañera digital que entiende, responde y se adapta a ti.',
+    hero_desc: 'Más que un buscador que te llena de ligas, es una Inteligencia Artificial pensada para todos los no expertos: fácil, cálida y directa. Da respuestas útiles de todo tipo sin que necesites saber de tecnología.',
     btn_google: 'Continuar con Google',
-    btn_fb: 'Continuar con Facebook',
-    or: 'o',
+    btn_facebook: 'Continuar con Facebook',
     btn_phone: 'Usar mi número',
-    legal: 'Al continuar, aceptas los <a href="https://siraia.com/terminos" target="_blank" rel="noopener">Términos</a> y la <a href="https://siraia.com/privacidad" target="_blank" rel="noopener">Política de Privacidad</a>.',
-    status_init_missing: 'Nota: falta la configuración de Firebase en esta página. Google/Facebook podrían no funcionar aún.',
-    status_auth: 'Autenticando…',
-    status_exchanging: 'Preparando tu cuenta…',
-    status_ok: '¡Listo! Redirigiendo al chat…',
-    status_fail_popup: 'No se pudo abrir la ventana de acceso. Intenta de nuevo.',
-    status_fail_generic: 'No se pudo completar el acceso. Intenta nuevamente.',
+    note_terms: 'Al continuar, aceptas los <a href="https://siraia.com/terminos" target="_blank" rel="noopener">Términos</a> y la <a href="https://siraia.com/privacidad" target="_blank" rel="noopener">Política de Privacidad</a>.',
+    placeholder_name: 'Ej: Guille, Ana, Sr. Pérez'
   },
   en: {
-    slogan: 'SiraIA: your digital companion that understands, answers and adapts to you.',
-    sub: 'More than a search engine full of links, it’s an AI designed for non-experts: friendly and direct. It gives useful answers of all kinds with no tech skills required.',
-    access_title: 'Choose how you want to sign in',
-    label_short: 'Type the name or nickname you want SiraIA to use for you.',
-    ph_short: 'e.g., Will, Ana, Mr. Pérez',
+    hero_title: 'SiralA: your digital companion that understands, answers and adapts to you.',
+    hero_desc: 'More than a search engine that floods you with links, it’s an AI designed for non-experts: simple, warm and direct. It gives useful answers without you needing to know about technology.',
     btn_google: 'Continue with Google',
-    btn_fb: 'Continue with Facebook',
-    or: 'or',
+    btn_facebook: 'Continue with Facebook',
     btn_phone: 'Use my phone number',
-    legal: 'By continuing, you accept the <a href="https://siraia.com/terminos" target="_blank" rel="noopener">Terms</a> and <a href="https://siraia.com/privacidad" target="_blank" rel="noopener">Privacy Policy</a>.',
-    status_init_missing: 'Note: Firebase configuration is missing on this page. Google/Facebook may not work yet.',
-    status_auth: 'Signing in…',
-    status_exchanging: 'Setting up your account…',
-    status_ok: 'Done! Taking you to the chat…',
-    status_fail_popup: 'Could not open the sign-in window. Try again.',
-    status_fail_generic: 'Sign-in failed. Please try again.',
+    note_terms: 'By continuing, you agree to the <a href="https://siraia.com/terminos" target="_blank" rel="noopener">Terms</a> and <a href="https://siraia.com/privacidad" target="_blank" rel="noopener">Privacy Policy</a>.',
+    placeholder_name: 'e.g., Will, Ana, Mr. Perez'
   }
 };
 
 function applyI18n() {
-  const t = I18N[LANG];
+  const dict = I18N[LANG] || I18N.es;
+  const t = (k)=> dict[k] || I18N.es[k] || '';
+  const safeSet = (sel, html)=> { const el = qs(sel); if (el) el.innerHTML = html; };
+  safeSet('[data-i18n="hero_title"]', t('hero_title'));
+  safeSet('[data-i18n="hero_desc"]', t('hero_desc'));
+  safeSet('#btnGoogle span', t('btn_google'));
+  safeSet('#btnFacebook span', t('btn_facebook'));
+  safeSet('#btnPhone span', t('btn_phone'));
+  safeSet('#noteTerms', t('note_terms'));
+  const pref = qs('#prefName');
+  if (pref) pref.placeholder = t('placeholder_name');
   document.documentElement.lang = LANG;
-  qs('#t-slogan').textContent = t.slogan;
-  qs('#t-sub').textContent = t.sub;
-  qs('#accessTitle').textContent = t.access_title;
-  qs('#t-label').textContent = t.label_short;
-  qs('#shortName').placeholder = t.ph_short;
-  qs('#btnGoogle').lastChild.textContent = ' ' + t.btn_google;
-  qs('#btnFacebook').lastChild.textContent = ' ' + t.btn_fb;
-  qs('#t-or').textContent = t.or;
-  qs('#btnPhone').textContent = t.btn_phone;
-  qs('#t-legal').innerHTML = t.legal;
-  qs('#langES').setAttribute('aria-pressed', LANG==='es');
-  qs('#langEN').setAttribute('aria-pressed', LANG==='en');
 }
-function setLang(lang){
+
+function setLang(lang) {
   LANG = lang;
   localStorage.setItem('landing_lang', lang);
   applyI18n();
 }
-/* Idioma UI */
-qsa('.lang-switch .chip').forEach(btn=>{
-  btn.addEventListener('click', ()=> setLang(btn.id==='langES'?'es':'en'));
+window.addEventListener('DOMContentLoaded', ()=>{
+  qs('#langES')?.addEventListener('click', ()=>setLang('es'));
+  qs('#langEN')?.addEventListener('click', ()=>setLang('en'));
 });
-applyI18n();
 
-/* Status */
-const statusBox = qs('#status');
-function showStatus(msg, tone='info'){
-  if (!msg) { statusBox.style.display='none'; statusBox.textContent=''; return; }
-  statusBox.style.display='block';
-  statusBox.innerHTML = msg;
-  statusBox.setAttribute('data-tone', tone);
+// ------------------ Propaga ?ref a CTAs ------------------
+function withRef(href) {
+  if (!REF) return href;
+  const u = new URL(href, location.origin);
+  u.searchParams.set('ref', REF);
+  return u.toString();
 }
-
-/* Firebase init (Compat) */
-let firebaseReady = false;
-try {
-  if (!window.firebaseConfig) {
-    showStatus(I18N[LANG].status_init_missing, 'warn');
-  } else {
-    const app = firebase.initializeApp(window.firebaseConfig);
-    window._siraAuth = firebase.auth(app);
-    firebaseReady = true;
-  }
-} catch (e) {
-  console.error('Firebase init error:', e);
-  showStatus(I18N[LANG].status_init_missing, 'warn');
-}
-
-/* Preferencias locales */
-function persistUserPrefs(){
-  const short = (qs('#shortName').value || '').trim();
-  if (short) localStorage.setItem('sira_short_name', short);
-  if (ref) localStorage.setItem('sira_ref', ref);
-}
-
-/* ------- Intercambio de JWT de servicio ------- */
-/** Ajusta esta URL si tu servicio vive en otro host */
-const SERVICE_BASE = 'https://siraia-auth-credits.onrender.com';
-
-/** Intercambia el idToken de Firebase por el JWT propio del servicio */
-async function exchangeJwtWithService(idToken, provider, profile){
-  showStatus(I18N[LANG].status_exchanging);
-  const payload = {
-    provider,
-    id_token: idToken,
-    email: profile?.email || null,
-    display_name: profile?.displayName || null,
-    short_name: localStorage.getItem('sira_short_name') || null,
-    referred_by: localStorage.getItem('sira_ref') || null,
-  };
-  const res = await fetch(`${SERVICE_BASE}/signup`, {
-    method:'POST',
-    headers:{
-      'Content-Type':'application/json',
-      'Authorization': `Bearer ${idToken}`
-    },
-    body: JSON.stringify(payload),
+function wireCTAs() {
+  ['btnPhoneLink', 'brandLink'].forEach(id=>{
+    const a = qs('#'+id);
+    if (a) a.href = withRef(a.href);
   });
-  // Se espera JSON: { jwt, credits, is_new, ... }
-  let data = null;
-  try{ data = await res.json(); }catch{ data = null; }
-  if (!res.ok || !data || !data.jwt) {
-    throw new Error('signup-no-jwt');
+}
+
+// ------------------ Firebase (Google/Facebook) ------------------
+let fbApp, fbAuth, providers = {};
+function initFirebaseIfNeeded() {
+  // Requiere que window.firebaseConfig esté definido en <head>
+  if (!window.firebaseConfig) return false;
+  try {
+    // SDK compat (v9 namespaced) o modular (v9+)
+    // Usamos compat por simplicidad en esta landing.
+    // global firebase proviene de /__/firebase/init.js o script del SDK que tengas cargado.
+    if (window.firebase?.apps?.length) {
+      fbApp = window.firebase.app();
+    } else {
+      fbApp = window.firebase.initializeApp(window.firebaseConfig);
+    }
+    fbAuth = window.firebase.auth();
+
+    // Persistencia local para mantener sesión
+    fbAuth.setPersistence(window.firebase.auth.Auth.Persistence.LOCAL);
+
+    providers.google = new window.firebase.auth.GoogleAuthProvider();
+    providers.facebook = new window.firebase.auth.FacebookAuthProvider();
+    return true;
+  } catch(e){
+    console.warn('Firebase init error:', e);
+    return false;
   }
-  try { localStorage.setItem('sira_jwt', data.jwt); } catch {}
+}
+
+async function doPopup(providerKey){
+  if (!fbAuth || !providers[providerKey]) throw new Error('auth_not_ready');
+  const prov = providers[providerKey];
+  // Opcional: hint del idioma
+  fbAuth.useDeviceLanguage();
+  const cred = await fbAuth.signInWithPopup(prov);
+  const user = cred?.user;
+  if (!user) throw new Error('no_user');
+  // Datos básicos
+  const profile = user.providerData?.[0] || {};
+  return {
+    email: profile.email || user.email || '',
+    displayName: getPreferredName() || profile.displayName || user.displayName || '',
+    provider: providerKey
+  };
+}
+
+// ------------------ Backend /signup ------------------
+async function postSignupSocial({email, displayName, provider}) {
+  const payload = {
+    email,
+    display_name: displayName,
+    provider,
+    referred_by: REF || null,
+    phone_e164: null
+  };
+  const res = await fetch(`${AUTH_BASE}/signup`, {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json' },
+    body: JSON.stringify(payload)
+  });
+  // Aceptamos 200–299; si backend retorna 200 con cuerpo {jwt,...}
+  if (!res.ok) throw new Error(`signup_status_${res.status}`);
+  const data = await res.json().catch(()=> ({}));
   return data;
 }
 
-/** Verifica que el JWT funcione contra /me */
-async function checkMe(){
-  const jwt = localStorage.getItem('sira_jwt');
-  if (!jwt) return false;
-  try{
-    const r = await fetch(`${SERVICE_BASE}/me`, {
-      headers: { 'Authorization': `Bearer ${jwt}` }
-    });
-    return r.ok;
-  }catch{ return false; }
+function persistSession({jwt, displayName, email, provider}) {
+  if (jwt) localStorage.setItem('sira_jwt', jwt);
+  if (displayName) localStorage.setItem('sira_display_name', displayName);
+  const profile = { display_name: displayName || '', email: email || '', provider: provider || '' };
+  localStorage.setItem('sira_profile', JSON.stringify(profile));
 }
 
-/* ------- Flujo OAuth ------- */
-async function signInWith(providerName){
-  if (!firebaseReady) { showStatus(I18N[LANG].status_init_missing, 'warn'); return; }
+function goChat(displayName){
+  const name = displayName || localStorage.getItem('sira_display_name') || '';
+  const u = new URL(CHAT_URL);
+  if (name) u.searchParams.set('name', name);
+  location.href = u.toString();
+}
+
+function goRegisterFallback(displayName, email, provider){
+  const u = new URL(REGISTER_URL);
+  if (displayName) u.searchParams.set('name', displayName);
+  if (email) u.searchParams.set('email', email);
+  if (provider) u.searchParams.set('from', provider);
+  if (REF) u.searchParams.set('ref', REF);
+  location.href = u.toString();
+}
+
+// ------------------ Handlers de botones ------------------
+async function onLogin(providerKey){
+  const btn = providerKey === 'google' ? qs('#btnGoogle') : qs('#btnFacebook');
+  if (btn) btn.disabled = true;
   try{
-    showStatus(I18N[LANG].status_auth);
-    persistUserPrefs();
+    // 1) Firebase popup
+    const social = await doPopup(providerKey);
+    // 2) Llamar /signup → debe devolver jwt (y activar créditos si es nuevo)
+    const data = await postSignupSocial({
+      email: social.email,
+      displayName: social.displayName,
+      provider: social.provider
+    });
 
-    let provider;
-    if (providerName==='google') {
-      provider = new firebase.auth.GoogleAuthProvider();
-      provider.addScope('email'); provider.addScope('profile');
-    } else if (providerName==='facebook') {
-      provider = new firebase.auth.FacebookAuthProvider();
-      provider.addScope('email'); provider.addScope('public_profile');
-    } else {
-      throw new Error('unknown-provider');
-    }
-
-    const result = await window._siraAuth.signInWithPopup(provider);
-    const user = result.user;
-    const idToken = await user.getIdToken(true);
-
-    // Intercambia por JWT del servicio (crea + acredita si es nuevo)
-    let signup;
-    try {
-      signup = await exchangeJwtWithService(idToken, providerName, user);
-    } catch (e) {
-      console.warn('exchangeJwt failed, fallback to register page', e);
-      // Fallback: permite vincular teléfono si el backend aún no soporta social-first
-      location.href = 'https://siraia.com/register.html?link=social';
+    // 3) Persistir sesión si backend devolvió jwt
+    if (data && data.jwt) {
+      persistSession({
+        jwt: data.jwt,
+        displayName: social.displayName,
+        email: social.email,
+        provider: social.provider
+      });
+      // 4) Ir al chat
+      goChat(social.displayName);
       return;
     }
 
-    // Sanity check contra /me
-    const ok = await checkMe();
-    if (!ok) {
-      // Si por alguna razón no está ya listo, manda a vínculo manual
-      location.href = 'https://siraia.com/register.html?link=social';
-      return;
-    }
-
-    showStatus(I18N[LANG].status_ok, 'ok');
-    await sleep(250);
-    // Redirige al chat (pasando el saludo si quieres)
-    const go = new URL('https://siraia.com/', location.origin);
-    const short = localStorage.getItem('sira_short_name');
-    if (short) go.searchParams.set('name', short);
-    location.href = go.toString();
-
-  } catch(err){
-    console.error('OAuth error', err);
-    if (String(err).toLowerCase().includes('popup')) {
-      showStatus(I18N[LANG].status_fail_popup, 'warn');
-    } else {
-      showStatus(I18N[LANG].status_fail_generic, 'warn');
-    }
+    // 5) Fallback si no hay jwt: completar en register.html
+    console.warn('Backend no devolvió jwt. Fallback a register.html');
+    goRegisterFallback(social.displayName, social.email, social.provider);
+  }catch(err){
+    console.error('login_social_error', err);
+    // Fallback de emergencia
+    goRegisterFallback(getPreferredName(), '', providerKey);
+  }finally{
+    if (btn) btn.disabled = false;
   }
 }
 
-/* Botones */
-qs('#btnGoogle')?.addEventListener('click', ()=>signInWith('google'));
-qs('#btnFacebook')?.addEventListener('click', ()=>signInWith('facebook'));
+// ------------------ Init ------------------
+(function init(){
+  // Idioma
+  applyI18n();
 
-/* Footer año */
-const y = qs('#y'); if (y) y.textContent = new Date().getFullYear();
+  // Propagar ref a links visibles
+  wireCTAs();
+
+  // Idioma load de botones
+  qs('#langES')?.setAttribute('aria-pressed', LANG==='es');
+  qs('#langEN')?.setAttribute('aria-pressed', LANG==='en');
+
+  // Menú hamburguesa (si existe)
+  const menuBtn = qs('#menuBtn'), menu = qs('#menu');
+  if (menuBtn && menu){
+    menuBtn.addEventListener('click', ()=> menu.classList.toggle('open'));
+  }
+
+  // Firebase (si hay config en head)
+  const ok = initFirebaseIfNeeded();
+  if (!ok){
+    console.warn('FirebaseConfig no presente; botones social no funcionarán.');
+  }
+
+  // Clicks
+  qs('#btnGoogle')?.addEventListener('click', ()=> onLogin('google'));
+  qs('#btnFacebook')?.addEventListener('click', ()=> onLogin('facebook'));
+
+  // Botón “Usar mi número” mantiene el ref
+  const phoneA = qs('#btnPhoneLink');
+  if (phoneA) phoneA.href = withRef(REGISTER_URL);
+})();
