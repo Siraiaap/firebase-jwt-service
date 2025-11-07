@@ -11,7 +11,7 @@
   <meta property="og:type" content="website" />
   <meta property="og:image" content="/landing/media/posters/og.jpg" />
 
-  <!-- Estilos (usamos tu CSS existente) -->
+  <!-- Estilos existentes -->
   <link rel="preload" href="/landing/styles.css?v=2" as="style">
   <link rel="stylesheet" href="/landing/styles.css?v=2" />
 
@@ -19,14 +19,15 @@
   <link rel="manifest" href="/landing/manifest.webmanifest">
   <link rel="icon" href="/landing/icons/icon-192.png" sizes="192x192" />
   <link rel="apple-touch-icon" href="/landing/icons/apple-touch-icon-180.png" />
+
   <style>
-    /* Ajustes mínimos para la vista de acceso (no rompemos tu styles.css) */
     :root { --c-bg:#F5F7F5; --c-brand:#6F8576; --c-text:#3A3D3B; }
     body { background:var(--c-bg); color:var(--c-text); }
     .access { padding: 24px 0 48px; }
     .access .container { max-width: 640px; margin: 0 auto; padding: 0 16px; }
     .brand-top { display:flex; align-items:center; gap:12px; margin: 8px 0 16px; }
-    .brand-top img { width:36px; height:36px; border-radius:8px; }
+    .brand-top img { width:36px; height:36px; border-radius:8px; object-fit:cover; background:#dfe5e1; }
+    .brand-top strong { font-size:18px; }
     .card { background: #fff; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,.06); padding: 16px; }
     .field { margin: 16px 0; }
     .field label { display:block; font-weight:600; margin-bottom: 6px; }
@@ -36,21 +37,31 @@
     .btn.secondary { background: #fff; color: var(--c-text); border:1px solid #d8ded8; }
     .btn:focus-visible { outline: 3px solid #3A3D3B; outline-offset: 2px; }
     .or { text-align:center; margin: 12px 0; color:#6b6b6b; }
-    .legal { font-size:13px; color:#6b6b6b; margin-top:10px; }
-    .chips { display:flex; gap:8px; flex-wrap:wrap; margin-top: 8px;}
-    .chip { background:#EDEAE0; color:#3A3D3B; border-radius:999px; padding:8px 12px; font-size:13px; }
     .notice { background:#f0f2f0; border:1px dashed #d8ded8; border-radius:12px; padding:12px; margin-top:12px; font-size:14px; }
-    .footer-links { display:flex; gap:16px; justify-content:center; margin-top:18px; font-size:14px; }
+    .footer-links { display:flex; gap:16px; justify-content:center; margin-top:18px; font-size:14px; flex-wrap:wrap; }
     .footer-links a { color: var(--c-text); text-decoration: underline; }
     .lang-switch { display:flex; gap:8px; justify-content:center; margin-top:10px; }
-    .lang-switch .chip { cursor:pointer; }
-    .divider { height:1px; background:#e7e7e7; margin:16px 0; }
+    .lang-switch .chip { cursor:pointer; background:#EDEAE0; color:#3A3D3B; border-radius:999px; padding:8px 12px; font-size:13px; }
+    .hero-slogan h1 { font-size: 28px; line-height: 1.2; margin: 8px 0 6px; }
+    .hero-slogan p { margin: 0 0 10px; color:#4c4f4d; }
     .btn-icon { width:20px; height:20px; }
   </style>
 
-  <!-- Firebase (CDN compat) -->
+  <!-- Firebase (compat) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+
+  <!-- Configuración real de Firebase (tuya) -->
+  <script>
+    window.firebaseConfig = {
+      apiKey: "AIzaSyBT4hTvAWk5lAT_OuJHjPCyKVUQ7jDpEAc",
+      authDomain: "siraia.firebaseapp.com",
+      projectId: "siraia",
+      storageBucket: "siraia.firebasestorage.app",
+      messagingSenderId: "264146805016",
+      appId: "1:264146805016:web:9ad62adc579ec4c6c43e6d"
+    };
+  </script>
 </head>
 <body>
   <main class="access">
@@ -60,18 +71,19 @@
         <strong>SiraIA</strong>
       </div>
 
-      <h1 style="margin:12px 0 8px;">Acceso</h1>
-      <p class="chips">
-        <span class="chip">En español</span>
-        <span class="chip">Rápida</span>
-        <span class="chip">Privada</span>
-      </p>
+      <div class="hero-slogan">
+        <h1 id="t-slogan">SiraIA: tu compañera digital que entiende, responde y se adapta a ti.</h1>
+        <p id="t-sub">
+          Más que un buscador que te llena de ligas, es una Inteligencia Artificial pensada para todos los no expertos:
+          fácil, cálida y directa. Da respuestas útiles de todo tipo sin que necesites saber de tecnología.
+        </p>
+      </div>
 
       <div class="card" aria-labelledby="accessTitle">
         <h2 id="accessTitle" style="font-size:18px; margin:0 0 6px;">Elige cómo quieres entrar</h2>
 
         <div class="field">
-          <label for="shortName">
+          <label for="shortName" id="t-label">
             Ingresa aquí el nombre o diminutivo con el que deseas que SiraIA se dirija a ti.
           </label>
           <input id="shortName" type="text" inputmode="text" autocomplete="nickname" maxlength="40" placeholder="Ej: Guille, Ana, Sr. Pérez" />
@@ -89,19 +101,19 @@
           Continuar con Facebook
         </button>
 
-        <div class="or">o</div>
+        <div class="or" id="t-or">o</div>
 
-        <a id="btnPhone" class="btn secondary" href="/register.html" aria-label="Usar mi número">
+        <a id="btnPhone" class="btn secondary" href="https://siraia.com/register.html" aria-label="Usar mi número">
           Usar mi número
         </a>
 
         <div class="notice" id="status" role="status" aria-live="polite" style="display:none;"></div>
 
-        <p class="legal">
-          No compartimos tu correo sin tu permiso. Tu nombre preferido solo se usa para saludarte.
+        <p class="notice" id="t-legal" style="margin-top:12px;">
+          Al continuar, aceptas los <a href="https://siraia.com/terminos" target="_blank" rel="noopener">Términos</a> y la
+          <a href="https://siraia.com/privacidad" target="_blank" rel="noopener">Política de Privacidad</a>.
         </p>
 
-        <div class="divider"></div>
         <div class="lang-switch">
           <button id="langES" class="chip" aria-pressed="true">ES</button>
           <button id="langEN" class="chip" aria-pressed="false">EN</button>
@@ -118,7 +130,7 @@
     </div>
   </main>
 
-  <!-- JS principal de acceso (v=5 para bust) -->
-  <script src="/landing/landing.js?v=5" defer></script>
+  <!-- JS acceso v=6 -->
+  <script src="/landing/landing.js?v=6" defer></script>
 </body>
 </html>
