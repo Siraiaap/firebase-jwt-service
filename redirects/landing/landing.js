@@ -1,4 +1,4 @@
-// redirects/landing/landing.js  v=9
+// redirects/landing/landing.js  v=10
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import {
   getAuth, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider,
