@@ -3,134 +3,73 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>SiraIA — Acceso</title>
-  <meta name="description" content="Accede a SiraIA en segundos. Continúa con Google o Facebook, o usa tu número de celular."/>
+  <title>SiralA — Acceso</title>
+  <meta name="description" content="Elige Google, Facebook o tu número para entrar."/>
   <meta name="theme-color" content="#6F8576" />
-  <meta property="og:title" content="SiraIA — Acceso" />
-  <meta property="og:description" content="Tu compañera digital: texto, audio e imagen + texto." />
-  <meta property="og:type" content="website" />
-  <meta property="og:image" content="/landing/media/posters/og.jpg" />
-
-  <!-- Estilos existentes -->
-  <link rel="preload" href="/landing/styles.css?v=2" as="style">
-  <link rel="stylesheet" href="/landing/styles.css?v=2" />
-
-  <!-- PWA / Icons -->
-  <link rel="manifest" href="/landing/manifest.webmanifest">
-  <link rel="icon" href="/landing/icons/icon-192.png" sizes="192x192" />
-  <link rel="apple-touch-icon" href="/landing/icons/apple-touch-icon-180.png" />
-
-  <style>
-    :root { --c-bg:#F5F7F5; --c-brand:#6F8576; --c-text:#3A3D3B; }
-    body { background:var(--c-bg); color:var(--c-text); }
-    .access { padding: 24px 0 48px; }
-    .access .container { max-width: 640px; margin: 0 auto; padding: 0 16px; }
-    .brand-top { display:flex; align-items:center; gap:12px; margin: 8px 0 16px; }
-    .brand-top img { width:36px; height:36px; border-radius:8px; object-fit:cover; background:#dfe5e1; }
-    .brand-top strong { font-size:18px; }
-    .card { background: #fff; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,.06); padding: 16px; }
-    .field { margin: 16px 0; }
-    .field label { display:block; font-weight:600; margin-bottom: 6px; }
-    .field input[type="text"]{ width:100%; padding:14px; border:1px solid #d8ded8; border-radius:12px; font-size:16px; outline-offset:2px; }
-    .btn { display:inline-flex; justify-content:center; align-items:center; gap:10px; padding:14px 16px; border-radius:14px; border:none; cursor:pointer; font-weight:700; font-size:16px; width:100%; }
-    .btn.primary { background: var(--c-brand); color: #fff; }
-    .btn.secondary { background: #fff; color: var(--c-text); border:1px solid #d8ded8; }
-    .btn:focus-visible { outline: 3px solid #3A3D3B; outline-offset: 2px; }
-    .or { text-align:center; margin: 12px 0; color:#6b6b6b; }
-    .notice { background:#f0f2f0; border:1px dashed #d8ded8; border-radius:12px; padding:12px; margin-top:12px; font-size:14px; }
-    .footer-links { display:flex; gap:16px; justify-content:center; margin-top:18px; font-size:14px; flex-wrap:wrap; }
-    .footer-links a { color: var(--c-text); text-decoration: underline; }
-    .lang-switch { display:flex; gap:8px; justify-content:center; margin-top:10px; }
-    .lang-switch .chip { cursor:pointer; background:#EDEAE0; color:#3A3D3B; border-radius:999px; padding:8px 12px; font-size:13px; }
-    .hero-slogan h1 { font-size: 28px; line-height: 1.2; margin: 8px 0 6px; }
-    .hero-slogan p { margin: 0 0 10px; color:#4c4f4d; }
-    .btn-icon { width:20px; height:20px; }
-  </style>
-
-  <!-- Firebase (compat) -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-
-  <!-- Configuración real de Firebase (tuya) -->
-  <script>
-    window.firebaseConfig = {
-      apiKey: "AIzaSyBT4hTvAWk5lAT_OuJHjPCyKVUQ7jDpEAc",
-      authDomain: "siraia.firebaseapp.com",
-      projectId: "siraia",
-      storageBucket: "siraia.firebasestorage.app",
-      messagingSenderId: "264146805016",
-      appId: "1:264146805016:web:9ad62adc579ec4c6c43e6d"
-    };
-  </script>
+  <link rel="icon" href="/redirects/landing/icons/icon-192.png" sizes="192x192" />
+  <link rel="stylesheet" href="/redirects/landing/styles.css?v=9" />
+  <!-- Firebase SDKs (v9 modular) -->
+  <script type="module" src="/redirects/landing/landing.js?v=9"></script>
 </head>
 <body>
-  <main class="access">
-    <div class="container">
-      <div class="brand-top">
-        <img src="/landing/icons/icon-192.png" alt="SiraIA" />
-        <strong>SiraIA</strong>
-      </div>
-
-      <div class="hero-slogan">
-        <h1 id="t-slogan">SiraIA: tu compañera digital que entiende, responde y se adapta a ti.</h1>
-        <p id="t-sub">
-          Más que un buscador que te llena de ligas, es una Inteligencia Artificial pensada para todos los no expertos:
-          fácil, cálida y directa. Da respuestas útiles de todo tipo sin que necesites saber de tecnología.
-        </p>
-      </div>
-
-      <div class="card" aria-labelledby="accessTitle">
-        <h2 id="accessTitle" style="font-size:18px; margin:0 0 6px;">Elige cómo quieres entrar</h2>
-
-        <div class="field">
-          <label for="shortName" id="t-label">
-            Ingresa aquí el nombre o diminutivo con el que deseas que SiraIA se dirija a ti.
-          </label>
-          <input id="shortName" type="text" inputmode="text" autocomplete="nickname" maxlength="40" placeholder="Ej: Guille, Ana, Sr. Pérez" />
-        </div>
-
-        <button id="btnGoogle" class="btn primary" aria-label="Continuar con Google">
-          <img class="btn-icon" alt="" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" />
-          Continuar con Google
-        </button>
-
-        <div style="height:8px"></div>
-
-        <button id="btnFacebook" class="btn secondary" aria-label="Continuar con Facebook">
-          <img class="btn-icon" alt="" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/facebook.svg" />
-          Continuar con Facebook
-        </button>
-
-        <div class="or" id="t-or">o</div>
-
-        <a id="btnPhone" class="btn secondary" href="https://siraia.com/register.html" aria-label="Usar mi número">
-          Usar mi número
-        </a>
-
-        <div class="notice" id="status" role="status" aria-live="polite" style="display:none;"></div>
-
-        <p class="notice" id="t-legal" style="margin-top:12px;">
-          Al continuar, aceptas los <a href="https://siraia.com/terminos" target="_blank" rel="noopener">Términos</a> y la
-          <a href="https://siraia.com/privacidad" target="_blank" rel="noopener">Política de Privacidad</a>.
-        </p>
-
-        <div class="lang-switch">
-          <button id="langES" class="chip" aria-pressed="true">ES</button>
-          <button id="langEN" class="chip" aria-pressed="false">EN</button>
-        </div>
-      </div>
-
-      <div class="footer-links">
-        <a href="https://siraia.com/privacidad" target="_blank" rel="noopener">Privacidad</a>
-        <a href="https://siraia.com/terminos" target="_blank" rel="noopener">Términos</a>
-        <a href="mailto:hola@siraia.com">hola@siraia.com</a>
-      </div>
-
-      <div class="copy" style="text-align:center; margin-top:8px;">© <span id="y"></span> SiraIA</div>
+  <header class="nav">
+    <div class="nav__row">
+      <a class="brand" href="/">SiralA</a>
     </div>
-  </main>
+  </header>
 
-  <!-- JS acceso v=9 -->
-  <script src="/landing/landing.js?v=9" defer></script>
+  <main class="container">
+    <section class="hero-card">
+      <h1>SiralA: tu compañera digital que entiende, responde y se adapta a ti</h1>
+      <p class="lead">
+        Más que un buscador con ligas, es IA pensada para no expertos: fácil, cálida y directa. 
+        Da respuestas útiles sin que necesites saber de tecnología.
+      </p>
+
+      <div class="form-block">
+        <label for="nick" class="lbl">Ingresa aquí el nombre o diminutivo con el que deseas que SiraIA se dirija a ti.</label>
+        <input id="nick" class="input" placeholder="Ej: Guille, Ana, Sr. Pérez" maxlength="60" />
+      </div>
+
+      <button id="btnGoogle" class="btn primary full">
+        <span>Continuar con Google</span>
+      </button>
+
+      <button id="btnFacebook" class="btn full">
+        <span>Continuar con Facebook</span>
+      </button>
+
+      <div class="divider">o</div>
+
+      <button id="btnPhone" class="btn ghost full">Usar mi número</button>
+
+      <!-- Bloque teléfono (aparece solo cuando el usuario elige "Usar mi número") -->
+      <div id="phoneBlock" class="phone-block" hidden>
+        <div class="row">
+          <select id="country" class="select">
+            <option value="+52">🇲🇽 +52 México</option>
+            <option value="+1">🇺🇸 +1 EEUU/Canadá</option>
+            <option value="+34">🇪🇸 +34 España</option>
+            <!-- agrega los que necesites -->
+          </select>
+          <input id="phone" class="input" placeholder="Tu número (solo dígitos)" inputmode="numeric" />
+        </div>
+        <button id="btnSendCode" class="btn primary">Enviar código por SMS</button>
+
+        <!-- reCAPTCHA: inicia invisible; si falla, mostramos el visible aquí -->
+        <div id="recaptcha-container" class="recaptcha-holder" hidden></div>
+
+        <div id="codeBlock" class="code-block" hidden>
+          <input id="smsCode" class="input" placeholder="Código de 6 dígitos" inputmode="numeric" />
+          <button id="btnVerify" class="btn primary">Validar código</button>
+        </div>
+      </div>
+
+      <p class="tos">
+        Al continuar, aceptas los <a href="https://siraia.com/terminos" target="_blank" rel="noopener">Términos</a> y la 
+        <a href="https://siraia.com/privacidad" target="_blank" rel="noopener">Política de Privacidad</a>.
+      </p>
+    </section>
+  </main>
 </body>
 </html>
