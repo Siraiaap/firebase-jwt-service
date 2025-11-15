@@ -8,17 +8,22 @@
     },
     {
       "site": "siraia-redirects",
-      "public": "redirects",
+      "public": "public/redirects",
       "cleanUrls": true,
       "trailingSlash": false,
+
+      // ⚠️ SOLO enviamos "/" y exactamente "/landing" a index.html.
+      // No usamos "/landing/**" para NO romper CSS/JS/íconos.
       "rewrites": [
-        { "source": "/",           "destination": "/landing/index.html" },
-        { "source": "/landing/**", "destination": "/landing/index.html" }
+        { "source": "/",        "destination": "/landing/index.html" },
+        { "source": "/landing", "destination": "/landing/index.html" }
       ],
+
       "redirects": [
         { "source": "/register", "destination": "https://siraia.com/register.html", "type": 302 },
         { "source": "/chat",     "destination": "https://siraia.com/",              "type": 302 },
-        { "source": "/app",      "destination": "https://siraia.com/",              "type": 302 }
+        { "source": "/app",      "destination": "https://siraia.com/",              "type": 302 },
+        { "source": "/phone",    "destination": "https://siraia.com/register.html?method=phone&from=siraia.app", "type": 302 }
       ]
     }
   ]

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>SiralA — Acceso</title>
+  <meta name="description" content="SiraIA: tu compañera digital que entiende, responde y se adapta a ti." />
+
+  <!-- Favicon e íconos: OBLIGATORIO el prefijo /landing/ -->
+  <link rel="icon" type="image/png" href="/landing/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="/landing/icons/apple-touch-icon-180.png" />
+  <link rel="manifest" href="/landing/manifest.webmanifest" />
+
+  <!-- CSS de la landing: OBLIGATORIO el prefijo /landing/ -->
+  <link rel="stylesheet" href="/landing/styles.css?v=17" />
+
+  <!-- Firebase v9 compat (Auth + App) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+
+  <!-- Configuración real -->
+  <script>
+    window.firebaseConfig = {
+      apiKey: "AIzaSyBT4hTvAWk5lAT_OuJHjPCyKVUQ7jDpEAc",
+      authDomain: "siraia.firebaseapp.com",
+      projectId: "siraia",
+      storageBucket: "siraia.firebasestorage.app",
+      messagingSenderId: "264146805016",
+      appId: "1:264146805016:web:9ad62adc579ec4c6c43e6d"
+    };
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <a href="/" class="brand">
+      <img src="/landing/icons/icon-192.png" alt="SiraIA" class="brand-logo" />
+      <span class="brand-text">SiralA</span>
+    </a>
+  </header>
+
+  <main class="container">
+    <h1 class="hero">SiraIA: tu compañera digital que entiende, responde y se adapta a ti.</h1>
+    <p class="lede">
+      Más que un buscador que te llena de ligas, es una Inteligencia Artificial pensada para todos los no expertos:
+      fácil, cálida y directa. Da respuestas útiles de todo tipo sin que necesites saber de tecnología.
+    </p>
+
+    <section class="card">
+      <h2 class="card-title" data-i18n="choose">Elige cómo quieres entrar</h2>
+
+      <label class="field-label" for="displayName" data-i18n="howToCallYou">
+        Ingresa aquí el nombre o diminutivo con el que deseas que SiraIA se dirija a ti.
+      </label>
+      <input
+        id="displayName"
+        class="input"
+        type="text"
+        inputmode="text"
+        autocomplete="nickname"
+        placeholder="Ej: Guille, Ana, Sr. Pérez"
+      />
+
+      <button id="btnGoogle" class="btn btn-primary with-icon">
+        <span class="gicon"></span><span data-i18n="btnGoogle">Continuar con Google</span>
+      </button>
+
+      <button id="btnFacebook" class="btn btn-secondary with-icon">
+        <span class="fbicon"></span><span data-i18n="btnFacebook">Continuar con Facebook</span>
+      </button>
+
+      <div class="or">o</div>
+
+      <button id="btnPhone" class="btn btn-ghost" data-i18n="btnPhone">Usar mi número</button>
+
+      <p class="terms">
+        <span data-i18n="accept">Al continuar, aceptas los</span>
+        <a href="/terms.html" target="_blank" rel="noopener">Términos</a>
+        <span data-i18n="and">y la</span>
+        <a href="/privacy.html" target="_blank" rel="noopener">Política de Privacidad</a>.
+      </p>
+
+      <div class="lang-switch">
+        <button type="button" id="btnES" class="chip">ES</button>
+        <button type="button" id="btnEN" class="chip">EN</button>
+      </div>
+
+      <div id="status" class="status" role="alert" aria-live="polite" hidden></div>
+    </section>
+  </main>
+
+  <!-- Lógica de la landing: OBLIGATORIO el prefijo /landing/ -->
+  <script src="/landing/landing.js?v=17" defer></script>
+</body>
+</html>
