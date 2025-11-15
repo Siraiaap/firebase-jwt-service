@@ -95,7 +95,7 @@ app.get('/health', (_req, res) => {
     ts: Date.now(),
     adminApps: admin.apps.length,
     project: serviceAccount?.project_id || null,
-    marker: 'signup_v2'
+    marker: 'signup_v3_google'
   });
 });
 
@@ -144,6 +144,10 @@ function phoneHash(e164) {
   return crypto.createHash('sha256').update(e164).digest('hex');
 }
 
+function googleHash(key) {
+  return 'g_' + crypto.createHash('sha256').update(String(key || '')).digest('hex');
+}
+
 function normalizeDisplayName(raw) {
   const txt = String(raw || '').trim();
   if (!txt) return '';
@@ -172,67 +176,172 @@ function auth(req, res, next) {
 
 app.post('/signup', async (req, res) => {
   try {
-    const { display_name: rawDisplayName, phone, phone_e164: phoneE164Raw, accept } = req.body || {};
-    if (!accept) return res.status(409).json({ error: 'TERMS_NOT_ACCEPTED' });
+    const body = req.body || {};
 
-    const display_name = normalizeDisplayName(rawDisplayName);
-    if (!display_name) return res.status(400).json({ error: 'MISSING_OR_INVALID_DISPLAY_NAME' });
+    // mode: "phone" (default) | "google"
+    const modeRaw = body.mode || 'phone';
+    const mode = typeof modeRaw === 'string' ? modeRaw.toLowerCase() : 'phone';
 
-    const inputPhone = phoneE164Raw || phone;
-    if (!inputPhone) return res.status(400).json({ error: 'MISSING_PHONE' });
+    const {
+      display_name: rawDisplayName,
+      phone,
+      phone_e164: phoneE164Raw,
+      accept,
+      firebase_uid,
+      email
+    } = body;
 
-    const phone_e164 = phoneE164Raw ? String(phoneE164Raw) : toE164(inputPhone, DEFAULT_COUNTRY);
-    const userId = phoneHash(phone_e164);
+    if (!accept) {
+      return res.status(409).json({ error: 'TERMS_NOT_ACCEPTED' });
+    }
 
-    console.log(`[SIGNUP] project=${serviceAccount?.project_id} userId=${userId}`);
+    // Normalizar display_name (intento extra a partir de email en modo google)
+    let display_name = normalizeDisplayName(rawDisplayName);
+    if (!display_name && mode === 'google' && email) {
+      const local = email.split('@')[0].replace(/[._]+/g, ' ');
+      display_name = normalizeDisplayName(local);
+    }
+    if (!display_name) {
+      return res.status(400).json({ error: 'MISSING_OR_INVALID_DISPLAY_NAME' });
+    }
 
-    const userRef = db.collection('users').doc(userId);
-    const snap = await userRef.get();
-
+    let userId;
+    let phone_e164 = null;
+    let userRef;
+    let snap;
     let userData;
     let is_new = false;
 
-    if (!snap.exists) {
-      is_new = true;
-      userData = {
-        display_name,
-        phone_e164,
-        credits_remaining: INITIAL_CREDITS,
-        credits_total: INITIAL_CREDITS,
-        created_at: admin.firestore.FieldValue.serverTimestamp(),
-      };
-      await userRef.set(userData);
+    if (mode === 'google') {
+      // ============ MODO GOOGLE ============
+      const googleKey = firebase_uid || email;
+      if (!googleKey) {
+        return res.status(400).json({ error: 'MISSING_GOOGLE_IDENTIFIER' });
+      }
+
+      // phone opcional en modo google
+      if (phoneE164Raw || phone) {
+        try {
+          phone_e164 = phoneE164Raw ? String(phoneE164Raw) : toE164(phone, DEFAULT_COUNTRY);
+        } catch (e) {
+          if (e?.message === 'PHONE_INVALID') {
+            return res.status(400).json({ error: 'PHONE_INVALID' });
+          }
+          throw e;
+        }
+      }
+
+      userId = googleHash(googleKey);
+      console.log(`[SIGNUP][GOOGLE] project=${serviceAccount?.project_id} userId=${userId}`);
+
+      userRef = db.collection('users').doc(userId);
+      snap = await userRef.get();
+
+      if (!snap.exists) {
+        is_new = true;
+        userData = {
+          display_name,
+          phone_e164: phone_e164 || null,
+          firebase_uid: firebase_uid || null,
+          email: email || null,
+          provider: 'google',
+          credits_remaining: INITIAL_CREDITS,
+          credits_total: INITIAL_CREDITS,
+          created_at: admin.firestore.FieldValue.serverTimestamp(),
+        };
+        await userRef.set(userData);
+      } else {
+        userData = snap.data() || {};
+
+        if (display_name && display_name !== userData.display_name) {
+          await userRef.update({ display_name });
+          userData.display_name = display_name;
+        }
+
+        if (phone_e164 && phone_e164 !== userData.phone_e164) {
+          await userRef.update({ phone_e164 });
+          userData.phone_e164 = phone_e164;
+        }
+
+        if (firebase_uid && firebase_uid !== userData.firebase_uid) {
+          await userRef.update({ firebase_uid });
+          userData.firebase_uid = firebase_uid;
+        }
+
+        if (email && email !== userData.email) {
+          await userRef.update({ email });
+          userData.email = email;
+        }
+
+        if (!userData.provider) {
+          await userRef.update({ provider: 'google' });
+          userData.provider = 'google';
+        }
+
+        if (userData.credits_total == null) userData.credits_total = INITIAL_CREDITS;
+        if (userData.credits_remaining == null) userData.credits_remaining = INITIAL_CREDITS;
+      }
     } else {
-      userData = snap.data() || {};
-      if (display_name && display_name !== userData.display_name) {
-        await userRef.update({ display_name });
-        userData.display_name = display_name;
+      // ============ MODO PHONE (POR DEFECTO) ============
+      const inputPhone = phoneE164Raw || phone;
+      if (!inputPhone) {
+        return res.status(400).json({ error: 'MISSING_PHONE' });
       }
-      if (!userData.phone_e164) {
-        await userRef.set({ phone_e164 }, { merge: true });
-        userData.phone_e164 = phone_e164;
+
+      phone_e164 = phoneE164Raw ? String(phoneE164Raw) : toE164(inputPhone, DEFAULT_COUNTRY);
+      userId = phoneHash(phone_e164);
+
+      console.log(`[SIGNUP][PHONE] project=${serviceAccount?.project_id} userId=${userId}`);
+
+      userRef = db.collection('users').doc(userId);
+      snap = await userRef.get();
+
+      if (!snap.exists) {
+        is_new = true;
+        userData = {
+          display_name,
+          phone_e164,
+          credits_remaining: INITIAL_CREDITS,
+          credits_total: INITIAL_CREDITS,
+          created_at: admin.firestore.FieldValue.serverTimestamp(),
+        };
+        await userRef.set(userData);
+      } else {
+        userData = snap.data() || {};
+
+        if (display_name && display_name !== userData.display_name) {
+          await userRef.update({ display_name });
+          userData.display_name = display_name;
+        }
+        if (!userData.phone_e164) {
+          await userRef.set({ phone_e164 }, { merge: true });
+          userData.phone_e164 = phone_e164;
+        }
+        if (userData.credits_total == null) userData.credits_total = INITIAL_CREDITS;
+        if (userData.credits_remaining == null) userData.credits_remaining = INITIAL_CREDITS;
       }
-      if (userData.credits_total == null) userData.credits_total = INITIAL_CREDITS;
-      if (userData.credits_remaining == null) userData.credits_remaining = INITIAL_CREDITS;
     }
 
-    const token = jwt.sign(
-      { sub: userId, phone_e164, display_name: userData.display_name },
-      JWT_SECRET,
-      { expiresIn: JWT_TTL }
-    );
+    const tokenPayload = {
+      sub: userId,
+      phone_e164: userData.phone_e164 || phone_e164 || null,
+      display_name: userData.display_name
+    };
+
+    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: JWT_TTL });
 
     return res.json({
       user: {
         id: userId,
         display_name: userData.display_name,
-        phone_e164: userData.phone_e164,
+        phone_e164: userData.phone_e164 || phone_e164 || '',
         credits_remaining: Number(userData.credits_remaining ?? INITIAL_CREDITS),
         credits_total: Number(userData.credits_total ?? INITIAL_CREDITS),
       },
       jwt: token,
       is_new,
-      credits_awarded: is_new ? INITIAL_CREDITS : 0
+      credits_awarded: is_new ? INITIAL_CREDITS : 0,
+      mode
     });
 
   } catch (e) {
