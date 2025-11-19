@@ -1770,66 +1770,91 @@
 
 <script>
 (() => {
-  const API_AUTH = 'https://siraia-auth-credits.onrender.com';
-  const LS_JWT   = 'sira_jwt';
-  const LS_NAME  = 'sira_display_name';
-  const LS_DONE  = 'sira_welcome_v4_done';
-  const LS_LAST  = 'sira_last_jwt_seen';
-  const ANCHOR_ID= 'sira-welcome-anchor';
+  const API_AUTH  = 'https://siraia-auth-credits.onrender.com';
+  const LS_JWT    = 'sira_jwt';
+  const LS_NAME   = 'sira_display_name';
+  const LS_DONE   = 'sira_welcome_v5_done';      // 🔄 nueva versión: v5
+  const LS_LAST   = 'sira_last_jwt_seen';
+  const ANCHOR_ID = 'sira-welcome-anchor';
+  const ICON_URL  = '/redirects/landing/icons/icon-192.png';
 
+  // Si cambia el JWT (nuevo login o nuevo usuario), permitimos mostrar de nuevo el mensaje
   try {
-    const jwt = localStorage.getItem(LS_JWT) || '';
-    const last= localStorage.getItem(LS_LAST) || '';
-    if (jwt && jwt !== last) { localStorage.setItem(LS_LAST, jwt); localStorage.removeItem(LS_DONE); }
+    const jwt  = localStorage.getItem(LS_JWT)  || '';
+    const last = localStorage.getItem(LS_LAST) || '';
+    if (jwt && jwt !== last) {
+      localStorage.setItem(LS_LAST, jwt);
+      localStorage.removeItem(LS_DONE);
+    }
   } catch {}
 
+  // Si ya se marcó como visto para esta versión, no mostramos nada
   if (localStorage.getItem(LS_DONE) === '1') return;
 
   function buildCard(name) {
     const el = document.createElement('div');
     el.id = 'welcomeCard';
+
     el.style.cssText = [
-      'width:100%','border:1px solid #E0E6E0','background:#FFF','border-radius:14px',
-      'padding:14px 16px','margin:8px 0 12px','color:#3A3D3B','line-height:1.5'
+      'width:100%',
+      'border:1px solid #E0E6E0',
+      'background:#FFF',
+      'border-radius:14px',
+      'padding:14px 16px',
+      'margin:8px 0 12px',
+      'color:#3A3D3B',
+      'line-height:1.5',
+      'max-height:70vh',
+      'overflow-y:auto'
     ].join(';');
 
-    const safeName = (String(name||'').trim());
-    const title = safeName
-      ? ( (navigator.language||'es').toLowerCase().startsWith('es') ? `¡Hola ${safeName}!` : `Hi ${safeName}!`)
-      : ( (navigator.language||'es').toLowerCase().startsWith('es') ? '¡Hola!' : 'Hi!');
-    const welcomeWord = ( (navigator.language||'es').toLowerCase().startsWith('es') ? 'Bienvenid@.' : 'Welcome.');
+    const safeName = (String(name || '').trim());
+    const isEs = (navigator.language || 'es').toLowerCase().startsWith('es');
 
-    const isEs = (navigator.language||'es').toLowerCase().startsWith('es');
+    const title = safeName
+      ? (isEs ? `¡Hola ${safeName}!` : `Hi ${safeName}!`)
+      : (isEs ? '¡Hola!' : 'Hi!');
+
+    const welcomeWord = isEs ? 'Bienvenid@.' : 'Welcome.';
+
     const p1 = isEs
-  ? `<b>📌 Recomendado antes de empezar</b><br>
-     Para entrar a tu chat como si fuera una app, agrega el acceso directo a tu pantalla principal:<br><br>
-     🔸 <b>En Android:</b> toca los <b>tres puntos ⋮</b> arriba a la derecha → <b>Agregar a pantalla principal</b>.<br>
-     🔸 <b>En iPhone:</b> toca el <b>cuadro con la flecha ↑</b> → <b>Agregar a pantalla de inicio</b>.<br><br>
-     Así tendrás este icono siempre a la mano:<br>
-     <img src="/icon-192.png" style="width:48px;height:48px;margin-top:6px;">`
-  : `<b>📌 Recommended before starting</b><br>
-     To access your chat like an app, add SiraIA to your home screen:<br><br>
-     🔸 <b>On Android:</b> tap the <b>three dots ⋮</b> (top right) → <b>Add to Home screen</b>.<br>
-     🔸 <b>On iPhone:</b> tap the <b>square with the arrow ↑</b> → <b>Add to Home Screen</b>.<br><br>
-     You’ll get this icon:<br>
-     <img src="/icon-192.png" style="width:48px;height:48px;margin-top:6px;">`;
+      ? `<b>📌 Recomendado antes de empezar</b><br>
+         Agrega SiraIA a la pantalla principal de tu celular para entrar como si fuera app:<br><br>
+         🔸 <b>En Android:</b> toca los <b>tres puntos</b> ⋮ arriba a la derecha → <b>Agregar a pantalla principal</b>.<br>
+         🔸 <b>En iPhone:</b> toca el <b>Cuadro con flecha</b> ↑ → <b>Agregar a pantalla de inicio</b>.<br><br>
+         <b>Accede desde este icono o en siraia.com:</b><br>
+         <img src="${ICON_URL}" style="width:48px;height:48px;margin-top:6px;">`
+      : `<b>📌 Recommended before starting</b><br>
+         Add SiraIA to your phone’s home screen to use it like an app:<br><br>
+         🔸 <b>On Android:</b> tap the <b>three dots</b> ⋮ in the top right → <b>Add to Home screen</b>.<br>
+         🔸 <b>On iPhone:</b> tap the <b>Share icon</b> ↑ → <b>Add to Home Screen</b>.<br><br>
+         <b>Access from this icon or at siraia.com:</b><br>
+         <img src="${ICON_URL}" style="width:48px;height:48px;margin-top:6px;">`;
+
     const p2 = isEs
-      ? '<b>Puedo apoyarte en lo que necesites. Tienes 10 consultas gratis, después da clic en "Comprar consultas" para adquirir paquetes .</b>'
-      : '<b>I can help with whatever you need. You get 10 free questions, after that, click "Buy credits" to purchase packages.</b>';
-    const p3t = isEs ? '<b>Tienes 3 formas de conversar conmigo:</b>' : '<b>You have 3 ways to chat with me:</b>';
+      ? '<b>Tienes 10 consultas gratis. Después usa "Comprar consultas" para adquirir paquetes.</b>'
+      : '<b>You have 10 free credits. Afterwards, use "Buy credits" to get more.</b>';
+
+    const p3t = isEs
+      ? '<b>Tienes 3 formas de conversar conmigo:</b>'
+      : '<b>You have 3 ways to chat with me:</b>';
+
     const li1 = isEs ? 'Texto a texto 💬' : 'Text to text 💬';
     const li2 = isEs ? 'Audio a audio 🎤' : 'Audio to audio 🎤';
     const li3 = isEs ? 'Imagen + texto → a texto 📷+💬' : 'Image + text → text 📷+💬';
+
     const important = isEs ? '<b>🔵 Importante:</b>' : '<b>🔵 Important:</b>';
     const importantBody = isEs
       ? 'Usa el botón redondo de abajo a la derecha para enviar texto o audio. Toca para comenzar a grabar y toca otra vez para enviar. Acepta el permiso de micrófono la primera vez.'
-      : 'Use the round button at the bottom right to send text or audio. Tap to start recording and tap again to send. Grant microphone permission the first time.';
+      : 'Use the round button at the bottom right to send text or audio. Tap to start recording and tap again to send. Allow microphone access the first time.';
 
-    const ctaStart = isEs ? 'Empezar a conversar' : 'Start talking';
+    const ctaStart = isEs ? 'Empezar a conversar' : 'Start chatting';
     const ctaHide  = isEs ? 'Ocultar mensaje' : 'Hide message';
 
     el.innerHTML = `
-      <div style="font-weight:800;margin-bottom:6px">${title} <span style="font-weight:600">${welcomeWord}</span></div>
+      <div style="font-weight:800;margin-bottom:6px">
+        ${title} <span style="font-weight:600">${welcomeWord}</span>
+      </div>
       <div style="font-size:14.5px">
         <p>${p1}</p>
         <p>${p2}</p>
@@ -1841,7 +1866,16 @@
         </ul>
         <p>${important} ${importantBody}</p>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <div style="
+        display:flex;
+        gap:8px;
+        flex-wrap:wrap;
+        margin-top:12px;
+        position:sticky;
+        bottom:0;
+        background:white;
+        padding-top:8px
+      ">
         <button id="wc-start" type="button"
           style="background:#6F8576;color:#fff;border:none;padding:10px 14px;border-radius:10px;font-weight:800;cursor:pointer">
           ${ctaStart}
@@ -1852,30 +1886,41 @@
         </button>
       </div>
     `;
-    el.querySelector('#wc-start').addEventListener('click', () => {
-      localStorage.setItem(LS_DONE, '1'); el.remove();
-      const inp = document.querySelector('input[placeholder], textarea[placeholder]');
+
+    el.querySelector('#wc-start').onclick = () => {
+      localStorage.setItem(LS_DONE, '1');
+      el.remove();
+      const inp = document.querySelector('textarea#u-text, textarea[placeholder], input[placeholder]');
       if (inp) inp.focus();
-    });
-    el.querySelector('#wc-hide').addEventListener('click', () => {
-      localStorage.setItem(LS_DONE, '1'); el.remove();
-    });
+    };
+
+    el.querySelector('#wc-hide').onclick = () => {
+      localStorage.setItem(LS_DONE, '1');
+      el.remove();
+    };
+
     return el;
   }
 
   async function getName() {
     let name = (localStorage.getItem(LS_NAME) || '').trim();
     if (name) return name;
+
     const jwt = localStorage.getItem(LS_JWT);
     if (!jwt) return '';
+
     try {
-      const r = await fetch(API_AUTH + '/me', { headers: { Authorization: 'Bearer ' + jwt } });
+      const r = await fetch(API_AUTH + '/me', {
+        headers: { Authorization: 'Bearer ' + jwt }
+      });
       if (!r.ok) return '';
       const me = await r.json();
       name = (me.display_name || (me.user && me.user.display_name) || '').trim();
       if (name) localStorage.setItem(LS_NAME, name);
       return name;
-    } catch { return ''; }
+    } catch {
+      return '';
+    }
   }
 
   async function insertAtAnchor() {
