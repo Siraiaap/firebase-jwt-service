@@ -1,6 +1,7 @@
 {
   "name": "SiraIA",
   "short_name": "SiraIA",
+  "version": "4",
   "description": "Tu compañera digital que entiende, responde y se adapta a ti. IA pensada para personas no expertas en tecnología.",
   "lang": "es",
   "start_url": "/",

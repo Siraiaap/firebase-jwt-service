@@ -1,7 +1,7 @@
 // sw.js - Service Worker básico para SiraIA (chat)
 // Cachea el shell principal para que la app cargue rápido.
 
-const CACHE_NAME = 'siraia-chat-v1';
+const CACHE_NAME = 'siraia-chat-v4';
 const URLS_TO_CACHE = [
   '/',
   '/index.html'

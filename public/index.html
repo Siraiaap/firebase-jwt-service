@@ -6,7 +6,7 @@
     name="viewport"
     content="width=device-width, initial-scale=1.0, viewport-fit=cover"
   />
-  <link rel="manifest" href="/manifest.webmanifest?v=3" />
+  <link rel="manifest" href="/manifest.webmanifest?v=4" />
   <title>SiraIA – Tu compañera digital confiable</title>
   <meta name="theme-color" content="#6F8576" />
   <style>
@@ -305,23 +305,12 @@
 .guide .btn.small{padding:8px 10px;font-weight:700;border-radius:999px;border:1px solid rgba(0,0,0,.12)}
 .micro-list{display:flex;flex-direction:column;gap:8px;margin:8px 16px}
 .micro-item{border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:10px;background:#fff;cursor:pointer;text-align:left}
-@media (prefers-color-scheme: dark){
-  .sheet{background:#121212;border-color:#222}
-  .sheet .cat{background:#1a1a1a;border-color:#2a2a2a}
-  .sheet .item{background:#121212;border-color:#2a2a2a;color:#f1f1f1}
-  .sheet header{border-bottom-color:#2a2a2a}
-  .sheet .footer{border-top-color:#2a2a2a}
-  .sheet-backdrop{background:rgba(0,0,0,.5)}
-  .sugg-tab{background:#121212;border-color:#2a2a2a;color:#f1f1f1}
-  .sugg-tab.active{color:#fff}
-  .guide{background:#121212;border-color:#2a2a2a}
-  .guide .tpl{background:#161616;border-color:#333}
-  .micro-item{background:#121212;border-color:#2a2a2a}
-}
-
-  </style>
+.micro-list{display:flex;flex-direction:column;gap:8px;margin:8px 16px}
+.micro-item{border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:10px;background:#fff;cursor:pointer;text-align:left}
+</style>
 </head>
 <body>
+
   <div class="siraia-app">
     <header>
       <div class="title">SiraIA</div>
@@ -1812,8 +1801,18 @@
 
     const isEs = (navigator.language||'es').toLowerCase().startsWith('es');
     const p1 = isEs
-      ? 'Accede a tu chat en: siraia.com'
-      : 'Access your chat at: siraia.com';
+  ? `<b>📌 Recomendado antes de empezar</b><br>
+     Para entrar a tu chat como si fuera una app, agrega el acceso directo a tu pantalla principal:<br><br>
+     🔸 <b>En Android:</b> toca los <b>tres puntos ⋮</b> arriba a la derecha → <b>Agregar a pantalla principal</b>.<br>
+     🔸 <b>En iPhone:</b> toca el <b>cuadro con la flecha ↑</b> → <b>Agregar a pantalla de inicio</b>.<br><br>
+     Así tendrás este icono siempre a la mano:<br>
+     <img src="/icon-192.png" style="width:48px;height:48px;margin-top:6px;">`
+  : `<b>📌 Recommended before starting</b><br>
+     To access your chat like an app, add SiraIA to your home screen:<br><br>
+     🔸 <b>On Android:</b> tap the <b>three dots ⋮</b> (top right) → <b>Add to Home screen</b>.<br>
+     🔸 <b>On iPhone:</b> tap the <b>square with the arrow ↑</b> → <b>Add to Home Screen</b>.<br><br>
+     You’ll get this icon:<br>
+     <img src="/icon-192.png" style="width:48px;height:48px;margin-top:6px;">`;
     const p2 = isEs
       ? '<b>Puedo apoyarte en lo que necesites. Tienes 10 consultas gratis, después da clic en "Comprar consultas" para adquirir paquetes .</b>'
       : '<b>I can help with whatever you need. You get 10 free questions, after that, click "Buy credits" to purchase packages.</b>';
@@ -2284,13 +2283,13 @@
 })();
 </script>
 
-<script src="/auth-credits/referral.js?v=3"></script>
+<script src="/auth-credits/referral.js?v=4"></script>
   <!-- Registro del Service Worker para la PWA del chat -->
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
         navigator.serviceWorker
-          .register("/sw.js")
+          .register("/sw.js?v=4")
           .catch((err) => {
             console.error("Error al registrar el service worker de SiraIA:", err);
           });
