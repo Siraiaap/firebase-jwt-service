@@ -6,6 +6,7 @@
     name="viewport"
     content="width=device-width, initial-scale=1.0, viewport-fit=cover"
   />
+  <link rel="manifest" href="/manifest.webmanifest?v=3" />
   <title>SiraIA – Tu compañera digital confiable</title>
   <meta name="theme-color" content="#6F8576" />
   <style>
@@ -1811,22 +1812,22 @@
 
     const isEs = (navigator.language||'es').toLowerCase().startsWith('es');
     const p1 = isEs
-      ? 'Más que mostrarte enlaces como un buscador, yo escucho tu pregunta, la entiendo y te resuelvo con ideas y soluciones. 💚'
-      : 'More than a search engine with links, I listen to your question, understand it, and reply with ideas and solutions. 💚';
+      ? 'Accede a tu chat en: siraia.com'
+      : 'Access your chat at: siraia.com';
     const p2 = isEs
-      ? '<b>Puedo apoyarte en lo que necesites, desde recetas, ideas para ahorrar, dudas de tecnología y signo zodiacal hasta inspiración personal y consultas legales o médicas (siempre deberás ratificar con un profesional).</b>'
-      : '<b>I can help with whatever you need—from recipes, saving ideas, tech doubts and zodiac signs to personal inspiration and legal/medical questions (always verify with a professional).</b>';
+      ? '<b>Puedo apoyarte en lo que necesites. Tienes 10 consultas gratis, después da clic en "Comprar consultas" para adquirir paquetes .</b>'
+      : '<b>I can help with whatever you need. You get 10 free questions, after that, click "Buy credits" to purchase packages.</b>';
     const p3t = isEs ? '<b>Tienes 3 formas de conversar conmigo:</b>' : '<b>You have 3 ways to chat with me:</b>';
     const li1 = isEs ? 'Texto a texto 💬' : 'Text to text 💬';
     const li2 = isEs ? 'Audio a audio 🎤' : 'Audio to audio 🎤';
     const li3 = isEs ? 'Imagen + texto → a texto 📷+💬' : 'Image + text → text 📷+💬';
-    const important = isEs ? '<b>🔘 Importante:</b>' : '<b>🔘 Important:</b>';
+    const important = isEs ? '<b>🔵 Importante:</b>' : '<b>🔵 Important:</b>';
     const importantBody = isEs
-      ? 'el botón circular del chat es el mismo para enviar texto y grabar audio. Toca para comenzar a grabar y toca para detener y enviar tu pregunta. La primera vez se te pedirá permiso de micrófono: toca <b>Permitir</b>.'
-      : 'the round chat button is the same to send text or record audio. Tap to start recording, tap to stop and send your question. On first use, grant microphone permission by tapping <b>Allow</b>.';
+      ? 'Usa el botón redondo de abajo a la derecha para enviar texto o audio. Toca para comenzar a grabar y toca otra vez para enviar. Acepta el permiso de micrófono la primera vez.'
+      : 'Use the round button at the bottom right to send text or audio. Tap to start recording and tap again to send. Grant microphone permission the first time.';
 
-    const ctaStart = isEs ? 'Clic para empezar a usar SiraIA' : 'Click to start using SiraIA';
-    const ctaHide  = isEs ? 'Ocultar' : 'Hide';
+    const ctaStart = isEs ? 'Empezar a conversar' : 'Start talking';
+    const ctaHide  = isEs ? 'Ocultar mensaje' : 'Hide message';
 
     el.innerHTML = `
       <div style="font-weight:800;margin-bottom:6px">${title} <span style="font-weight:600">${welcomeWord}</span></div>
@@ -2283,6 +2284,18 @@
 })();
 </script>
 
-<script src="/auth-credits/referral.js"></script>
+<script src="/auth-credits/referral.js?v=3"></script>
+  <!-- Registro del Service Worker para la PWA del chat -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker
+          .register("/sw.js")
+          .catch((err) => {
+            console.error("Error al registrar el service worker de SiraIA:", err);
+          });
+      });
+    }
+  </script>
 </body>
 </html>

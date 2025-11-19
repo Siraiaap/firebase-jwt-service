@@ -6,7 +6,7 @@
 
 (function () {
   const params = new URLSearchParams(window.location.search);
-  const from = params.get("from");
+  const from = params.get("from") || "";
   const method = params.get("method"); // "google" | "facebook" | "phone"
 
   const bannerEl = document.getElementById("sira-auto-banner");
@@ -28,67 +28,43 @@
     bannerEl.textContent = msg;
   }
 
-  // Si no venimos de siraia.app, no hacer nada
-  if (from !== "siraia.app") return;
-
-  // Si el método es "phone", solo mostramos ayuda suave
-  if (method === "phone") {
-    showBanner(
-      "Completa tu registro con tu número de celular para activar tus créditos.",
-      "info"
-    );
-    return;
-  }
-
-  // Solo auto-tramitamos para google/facebook
-  if (method !== "google" && method !== "facebook") return;
-
-  // Leemos el perfil que guardó la landing (sira_oauth_profile)
-  let profileRaw = null;
-  try {
-    profileRaw = localStorage.getItem("sira_oauth_profile");
-  } catch (e) {
-    /* ignore */
-  }
-
-  if (!profileRaw) {
-    // Sin perfil no podemos hacer auto-signup; dejamos formulario normal
-    showBanner(
-      "Revisa tus datos y completa el registro. No pude recuperar tu perfil.",
-      "error"
-    );
-    return;
-  }
-
-  let profile;
-  try {
-    profile = JSON.parse(profileRaw);
-  } catch (e) {
-    showBanner(
-      "Ocurrió un problema con los datos de acceso. Puedes continuar usando tu número.",
-      "error"
-    );
-    return;
-  }
-
-  // Evitar re-ejecutar si ya lo hicimos con el mismo usuario
-  try {
-    const done = localStorage.getItem("sira_oauth_done");
-    if (done && done === String(profile.uid || "")) {
-      return;
+  // Si no venimos de OAuth, no hacemos nada (se usa flujo normal por teléfono)
+  if (method !== "google" && method !== "facebook") {
+    if (from === "siraia.app") {
+      // Vino desde la landing pero sin método claro: solo mostramos aviso suave
+      showBanner(
+        "Completa tu registro usando tu número de celular para activar tus créditos.",
+        "info"
+      );
     }
-  } catch (e) {
-    /* ignore */
+    return;
   }
+
+  // Leemos datos del querystring
+  const firebaseUid = (params.get("firebase_uid") || "").trim();
+  const email = (params.get("email") || "").trim();
+  const displayNameFromUrl = (params.get("display_name") || "").trim();
 
   const displayName =
-    (profile.displayName || profile.name || "").trim() || "SiraIA";
+    displayNameFromUrl ||
+    // fallback por si algún día Google no manda nombre y el usuario no escribió nada
+    "SiraIA";
 
+  if (!firebaseUid && !email) {
+    showBanner(
+      "No pude recuperar tu perfil de Google. Puedes completar el registro usando tu número de celular.",
+      "error"
+    );
+    return;
+  }
+
+  // Cuerpo para el microservicio /signup en modo "google"
   const body = {
-    provider: method, // "google" o "facebook"
-    provider_uid: profile.uid || profile.userId || null,
+    mode: "google", // backend trata esto como flujo OAuth
     display_name: displayName,
-    email: profile.email || null,
+    firebase_uid: firebaseUid || null,
+    email: email || null,
+    accept: true,
   };
 
   showBanner(
@@ -98,7 +74,7 @@
     "info"
   );
 
-  fetch("https://siraia-auth-credits.onrender.com/signup-oauth", {
+  fetch("https://siraia-auth-credits.onrender.com/signup", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -113,10 +89,33 @@
       return { ok: r.ok, data };
     })
     .then(({ ok, data }) => {
-      if (!ok || !data || !data.jwt) {
-        console.error("signup-oauth error:", data);
+      if (!ok) {
+        const code = data && data.error ? data.error : "SIGNUP_FAILED";
+        console.error("signup-oauth error:", code, data);
+
+        if (code === "TERMS_NOT_ACCEPTED") {
+          showBanner(
+            "Debes aceptar los términos para continuar. Usa tu número de celular para registrarte.",
+            "error"
+          );
+        } else if (code === "MISSING_OR_INVALID_DISPLAY_NAME") {
+          showBanner(
+            "Tu nombre no es válido. Corrígelo en el campo correspondiente y vuelve a intentar.",
+            "error"
+          );
+        } else {
+          showBanner(
+            "No pude conectar tu cuenta de Google. Puedes registrarte usando tu número de celular.",
+            "error"
+          );
+        }
+        return;
+      }
+
+      if (!data || !data.jwt || !data.user) {
+        console.error("signup-oauth respuesta incompleta:", data);
         showBanner(
-          "No pude crear tu cuenta automáticamente. Puedes continuar usando tu número de celular.",
+          "Ocurrió un problema al conectar tu cuenta. Intenta de nuevo o usa tu número de celular.",
           "error"
         );
         return;
@@ -136,11 +135,11 @@
             oauth_provider: method,
           })
         );
-        if (profile.uid) {
-          localStorage.setItem("sira_oauth_done", String(profile.uid));
+        if (firebaseUid) {
+          localStorage.setItem("sira_oauth_last_uid", firebaseUid);
         }
       } catch (e) {
-        console.error("Error guardando sesión OAuth:", e);
+        console.warn("No pude guardar perfil local:", e);
       }
 
       showBanner("Cuenta conectada. Entrando al chat…", "info");

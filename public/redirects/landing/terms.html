@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Términos de uso — SiraIA</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f7f5ef;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+
+    .container {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+      line-height: 1.6;
+      background-color: #fff;
+      margin-top: 1.5rem;
+      margin-bottom: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.08);
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 1.8rem;
+    }
+
+    h2 {
+      margin-top: 2rem;
+      font-size: 1.3rem;
+    }
+
+    p {
+      margin-bottom: 1rem;
+      font-size: 1rem;
+    }
+
+    ul {
+      padding-left: 1.2rem;
+    }
+
+    .lang-switch {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .chip {
+      border: 1px solid #bbb;
+      background-color: #eee;
+      border-radius: 999px;
+      padding: 0.4rem 1rem;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .chip.active {
+      background-color: #333;
+      color: #fff;
+      border-color: #333;
+    }
+
+    .back-btn {
+      display: inline-block;
+      background-color: #5c7463;
+      color: #fff;
+      padding: 0.8rem 1.4rem;
+      border-radius: 999px;
+      text-decoration: none;
+      font-size: 1rem;
+      margin-top: 2rem;
+    }
+  </style>
+
+  <script>
+    function setLang(lang) {
+      document.querySelectorAll('[data-lang]').forEach(el => {
+        el.style.display = el.getAttribute('data-lang') === lang ? 'block' : 'none';
+      });
+      document.querySelectorAll('.chip').forEach(c => {
+        c.classList.toggle('active', c.dataset.set === lang);
+      });
+    }
+    document.addEventListener("DOMContentLoaded", () => setLang("es"));
+  </script>
+</head>
+
+<body>
+  <div class="container">
+    <!-- Language Switch -->
+    <div class="lang-switch">
+      <div class="chip active" data-set="es" onclick="setLang('es')">ES</div>
+      <div class="chip" data-set="en" onclick="setLang('en')">EN</div>
+    </div>
+
+    <!-- =======================
+         ESPAÑOL
+    ======================= -->
+    <div data-lang="es">
+      <h1>Términos de uso — SiraIA</h1>
+
+      <p>Bienvenido a SiraIA. Estos términos de uso regulan el acceso y uso de nuestra plataforma y servicios.</p>
+
+      <h2>1. Aceptación</h2>
+      <p>Al continuar usando SiraIA, aceptas estas condiciones y nuestra política de privacidad.</p>
+
+      <h2>2. Uso permitido</h2>
+      <p>SiraIA está diseñada como asistente digital informativo. No proporcionamos asesoría legal, médica ni financiera profesional.</p>
+
+      <h2>3. Registro y autenticación</h2>
+      <p>Para acceder al sistema puedes usar Google, Facebook o tu número telefónico. Al hacerlo, aceptas nuestras políticas de autenticación y manejo de datos.</p>
+
+      <h2>4. Créditos y funcionalidad</h2>
+      <p>SiraIA opera con un sistema de créditos. El uso de cada consulta puede consumir créditos según el tipo de interacción.</p>
+
+      <h2>5. Limitación de responsabilidad</h2>
+      <p>No somos responsables por decisiones tomadas con base en contenido generado por IA. Usa la información como referencia y bajo tu propio criterio.</p>
+
+      <h2>6. Modificaciones</h2>
+      <p>Estos términos pueden cambiar sin previo aviso para mejorar nuestros servicios.</p>
+    </div>
+
+    <!-- =======================
+         ENGLISH
+    ======================= -->
+    <div data-lang="en" style="display:none">
+      <h1>Terms of Use — SiraIA</h1>
+
+      <p>Welcome to SiraIA. These terms govern your access and use of our platform and services.</p>
+
+      <h2>1. Acceptance</h2>
+      <p>By continuing to use SiraIA, you agree to these conditions and our privacy policy.</p>
+
+      <h2>2. Permitted Use</h2>
+      <p>SiraIA is an informational digital assistant. We do not provide professional legal, medical, or financial advice.</p>
+
+      <h2>3. Registration and Authentication</h2>
+      <p>You may access the platform using Google, Facebook, or your phone number. By doing so, you agree to our authentication and data handling policies.</p>
+
+      <h2>4. Credits and Functionality</h2>
+      <p>SiraIA operates with a credit system. Each interaction may consume credits depending on the type of query.</p>
+
+      <h2>5. Limitation of Liability</h2>
+      <p>We are not responsible for decisions made based on AI-generated content. Use all information as reference and with your own judgment.</p>
+
+      <h2>6. Changes</h2>
+      <p>These terms may change without prior notice to improve our services.</p>
+    </div>
+
+    <a href="https://siraia.app" class="back-btn">Volver a SiraIA</a>
+  </div>
+</body>
+</html>
