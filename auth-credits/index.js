@@ -14,7 +14,7 @@ const { parsePhoneNumberFromString } = require('libphonenumber-js');
 ================================ */
 const PORT = process.env.PORT || 8080;
 const JWT_SECRET = process.env.JWT_SECRET;               // OBLIGATORIO
-const JWT_TTL = process.env.JWT_TTL || '7d';
+const JWT_TTL = process.env.JWT_TTL || '365d';
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 const DEFAULT_COUNTRY = process.env.DEFAULT_COUNTRY || 'MX';
 const INITIAL_CREDITS = Number(process.env.INITIAL_CREDITS || 10);
